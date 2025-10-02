@@ -49,11 +49,12 @@ jobs:
             exit 1
           fi
 
-      - name: Install golangci-lint Action
-        uses: golangci/golangci-lint-action@v4
-        with:
-          version: v1.59.0
-          args: --timeout 5m ./...
+      - name: Run golangci-lint (download binary)
+        run: |
+          echo "Downloading golangci-lint v1.59.0..."
+          curl -sSfL https://github.com/golangci/golangci-lint/releases/download/v1.59.0/golangci-lint-1.59.0-linux-amd64.tar.gz -o /tmp/golangci.tgz
+          tar -xzf /tmp/golangci.tgz -C /tmp
+          /tmp/golangci-lint-1.59.0-linux-amd64/golangci-lint run --out-format=colored-line-number --timeout 5m ./...
 
       - name: Govulncheck (vuln scan for Go modules)
         run: |
