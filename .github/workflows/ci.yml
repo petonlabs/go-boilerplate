@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [ '**' ]
+    # run CI only for main and dev branches
+    branches: [ 'main', 'dev' ]
   pull_request:
-    branches: [ '**' ]
+    # run CI for PRs targeting main and dev
+    branches: [ 'main', 'dev' ]
 
 jobs:
   build:
@@ -45,6 +47,28 @@ jobs:
             echo "gofmt found issues:" && gofmt -l .
             exit 1
           fi
+
+      - name: Install golangci-lint Action
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: v1.59.0
+          args: --timeout 5m ./...
+
+      - name: Govulncheck (vuln scan for Go modules)
+        run: |
+          cd apps/backend
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Install gosec
+        run: |
+          cd apps/backend
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+
+      - name: Run gosec (security checks)
+        run: |
+          cd apps/backend
+          gosec ./...
 
       - name: Vet
         run: |
