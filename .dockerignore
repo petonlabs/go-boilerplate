@@ -1,0 +1,25 @@
+# General
+.git
+.gitignore
+node_modules
+dist
+build
+tmp
+.cache
+.env
+.env.*
+Dockerfile*
+docker-compose*.yml
+
+# Go
+**/*.test
+**/*.out
+**/bin
+**/coverage*
+
+# Frontend/Bun
+packages/**/node_modules
+packages/**/dist
+
+# Mac/OS
+.DS_Store

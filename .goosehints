@@ -1,0 +1,81 @@
+# .goosehints
+
+You are working in a monorepo called **Go Boilerplate**. It contains a Go backend and TypeScript/Bun frontend managed with Turborepo.
+
+## Monorepo Context
+- Root contains `package.json`, `turbo.json`, and workspace definitions.
+- Backend is in `apps/backend` (Go, Echo framework).
+- Frontend and shared packages are under `packages/*` (TypeScript/React/Vue).
+- Go modules use clean architecture principles: handlers, services, repositories, models, infrastructure.
+- Bun manages JS/TS dependencies and dev/build commands.
+- Turborepo orchestrates build, lint, test, and dev tasks across Go and TS code.
+
+## Tech Stack
+- Go 1.24+
+- Bun + Node.js 22+
+- PostgreSQL 16+ (persistence)
+- Redis 8+ (caching, background jobs with Asynq)
+- Clerk SDK (authentication)
+- Resend (transactional email)
+- New Relic APM (observability)
+- OpenAPI/Swagger (API documentation)
+
+## Development Workflow
+- Go backend commands run via `task` (e.g. `task run`, `task migrations:up`, `task test`).
+- JS/TS frontend commands run via Bun (`bun dev`, `bun build`, `bun lint`).
+- Turborepo is used to coordinate multi-project tasks (`turbo run build`, `turbo run dev`, `turbo run test`).
+- Outputs must be cached correctly for Turborepo:
+  - Go: `apps/backend/bin/**`
+  - Frontend: `packages/**/dist/**`
+
+## System Design Principles
+1. **Clean Architecture**
+   - Keep business logic in services.
+   - Handlers only translate HTTP requests/responses.
+   - Repositories abstract persistence.
+   - Infrastructure handles external integrations.
+
+2. **Scalability**
+   - Use connection pooling for Postgres.
+   - Redis queues scale horizontally for background jobs.
+   - API should remain stateless; authentication with Clerk/JWT.
+
+3. **Security**
+   - Enforce JWT validation and Clerk authentication.
+   - Enable CORS for allowed domains only.
+   - Apply rate limiting and secure headers.
+   - Rotate secrets, don’t hardcode.
+
+4. **Observability**
+   - Use structured logging with correlation IDs.
+   - Export traces and metrics to New Relic.
+   - Ensure every service exposes health endpoints.
+
+5. **Resilience**
+   - Use retries and exponential backoff for external calls (DB, Redis, email).
+   - Graceful shutdown with context cancellation in Go.
+   - Use reverse proxy (nginx or Caddy) in production.
+
+6. **Testing**
+   - Unit tests for services.
+   - Integration tests with Testcontainers for Postgres + Redis.
+   - Coverage reports required for merges.
+   - API contract tests based on OpenAPI spec.
+
+7. **Deployment**
+   - CI/CD should:
+     * Run lint, tests, and coverage gates.
+     * Build backend binaries and frontend assets.
+     * Run DB migrations automatically.
+     * Push container images to registry.
+
+## Style & Conventions
+- Go: use `go fmt`, `go vet`, `task tidy`.
+- JS/TS: ESLint + Prettier via `bun lint`.
+- Consistent commit messages (`feat:`, `fix:`, `chore:`).
+- PRs must update docs (README, Swagger, etc.) if APIs change.
+
+## References
+@README.md
+@apps/backend/.env.example
+@turbo.json
