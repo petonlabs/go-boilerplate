@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+    branches: [ '**' ]
+
+jobs:
+  build:
+    name: Build & Test (Go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.24', '1.25' ]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ matrix.go }}-modules-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-${{ matrix.go }}-modules-
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Prepare module
+        run: |
+          cd apps/backend
+          go env -w GOPROXY=https://proxy.golang.org,direct
+          go mod download
+
+      - name: Check formatting
+        run: |
+          cd apps/backend
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "gofmt found issues:" && gofmt -l .
+            exit 1
+          fi
+
+      - name: Vet
+        run: |
+          cd apps/backend
+          go vet ./...
+
+      - name: Test
+        run: |
+          cd apps/backend
+          go test ./... -v
+
+      - name: Build binary
+        run: |
+          cd apps/backend
+          mkdir -p bin
+          go build -o bin/server ./cmd/go-boilerplate
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.go }}
+          path: apps/backend/bin/server
