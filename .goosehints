@@ -3,6 +3,7 @@
 You are working in a monorepo called **Go Boilerplate**. It contains a Go backend and TypeScript/Bun frontend managed with Turborepo.
 
 ## Monorepo Context
+
 - Root contains `package.json`, `turbo.json`, and workspace definitions.
 - Backend is in `apps/backend` (Go, Echo framework).
 - Frontend and shared packages are under `packages/*` (TypeScript/React/Vue).
@@ -11,6 +12,7 @@ You are working in a monorepo called **Go Boilerplate**. It contains a Go backen
 - Turborepo orchestrates build, lint, test, and dev tasks across Go and TS code.
 
 ## Tech Stack
+
 - Go 1.24+
 - Bun + Node.js 22+
 - PostgreSQL 16+ (persistence)
@@ -21,6 +23,7 @@ You are working in a monorepo called **Go Boilerplate**. It contains a Go backen
 - OpenAPI/Swagger (API documentation)
 
 ## Development Workflow
+
 - Go backend commands run via `task` (e.g. `task run`, `task migrations:up`, `task test`).
 - JS/TS frontend commands run via Bun (`bun dev`, `bun build`, `bun lint`).
 - Turborepo is used to coordinate multi-project tasks (`turbo run build`, `turbo run dev`, `turbo run test`).
@@ -29,6 +32,7 @@ You are working in a monorepo called **Go Boilerplate**. It contains a Go backen
   - Frontend: `packages/**/dist/**`
 
 ## System Design Principles
+
 1. **Clean Architecture**
    - Keep business logic in services.
    - Handlers only translate HTTP requests/responses.
@@ -64,18 +68,20 @@ You are working in a monorepo called **Go Boilerplate**. It contains a Go backen
 
 7. **Deployment**
    - CI/CD should:
-     * Run lint, tests, and coverage gates.
-     * Build backend binaries and frontend assets.
-     * Run DB migrations automatically.
-     * Push container images to registry.
+     - Run lint, tests, and coverage gates.
+     - Build backend binaries and frontend assets.
+     - Run DB migrations automatically.
+     - Push container images to registry.
 
 ## Style & Conventions
+
 - Go: use `go fmt`, `go vet`, `task tidy`.
 - JS/TS: ESLint + Prettier via `bun lint`.
 - Consistent commit messages (`feat:`, `fix:`, `chore:`).
 - PRs must update docs (README, Swagger, etc.) if APIs change.
 
 ## References
+
 @README.md
 @apps/backend/.env.example
 @turbo.json
