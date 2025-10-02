@@ -5,11 +5,11 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/petonlabs/go-boilerplate/internal/errs"
+	"github.com/petonlabs/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/sqlerr"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/sriniously/go-boilerplate/internal/errs"
-	"github.com/sriniously/go-boilerplate/internal/server"
-	"github.com/sriniously/go-boilerplate/internal/sqlerr"
 )
 
 type GlobalMiddlewares struct {

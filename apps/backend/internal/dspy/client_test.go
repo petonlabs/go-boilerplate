@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sriniously/go-boilerplate/internal/dspy"
+	"github.com/petonlabs/go-boilerplate/internal/dspy"
 )
 
 func TestDspyPing(t *testing.T) {

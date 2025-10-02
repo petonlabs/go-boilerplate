@@ -13,9 +13,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/tracelog"
 	"github.com/newrelic/go-agent/v3/integrations/nrpgx5"
+	"github.com/petonlabs/go-boilerplate/internal/config"
+	loggerConfig "github.com/petonlabs/go-boilerplate/internal/logger"
 	"github.com/rs/zerolog"
-	"github.com/sriniously/go-boilerplate/internal/config"
-	loggerConfig "github.com/sriniously/go-boilerplate/internal/logger"
 )
 
 type Database struct {

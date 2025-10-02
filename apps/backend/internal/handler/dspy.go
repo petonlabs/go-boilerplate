@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/sriniously/go-boilerplate/internal/dspy"
-	"github.com/sriniously/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/dspy"
+	"github.com/petonlabs/go-boilerplate/internal/server"
 )
 
 type DspyHandler struct {

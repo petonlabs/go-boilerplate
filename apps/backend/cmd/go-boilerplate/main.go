@@ -10,14 +10,14 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/sriniously/go-boilerplate/internal/config"
-	"github.com/sriniously/go-boilerplate/internal/database"
-	"github.com/sriniously/go-boilerplate/internal/handler"
-	"github.com/sriniously/go-boilerplate/internal/logger"
-	"github.com/sriniously/go-boilerplate/internal/repository"
-	"github.com/sriniously/go-boilerplate/internal/router"
-	"github.com/sriniously/go-boilerplate/internal/server"
-	"github.com/sriniously/go-boilerplate/internal/service"
+	"github.com/petonlabs/go-boilerplate/internal/config"
+	"github.com/petonlabs/go-boilerplate/internal/database"
+	"github.com/petonlabs/go-boilerplate/internal/handler"
+	"github.com/petonlabs/go-boilerplate/internal/logger"
+	"github.com/petonlabs/go-boilerplate/internal/repository"
+	"github.com/petonlabs/go-boilerplate/internal/router"
+	"github.com/petonlabs/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/service"
 )
 
 const DefaultContextTimeout = 30

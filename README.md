@@ -162,7 +162,7 @@ AUTH_SECRET_KEY=<generate-strong-key>1. Clone the repository:
 
 INTEGRATION_RESEND_API_KEY=<your-resend-key>
 
-- **dspy-go health**: http://localhost:8080/dspy/healthgit clone https://github.com/sriniously/go-boilerplate.git
+- **dspy-go health**: http://localhost:8080/dspy/healthgit clone https://github.com/petonlabs/go-boilerplate.git
 
 # Observability (optional)
 
