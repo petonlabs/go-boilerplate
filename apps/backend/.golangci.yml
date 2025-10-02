@@ -41,7 +41,6 @@ linters:
     - gomodguard
     - goprintffuncname
     - gosec
-    - iface
     - intrange
     - lll
     - loggercheck
