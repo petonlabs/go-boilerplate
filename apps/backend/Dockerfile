@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-FROM golang:trixie AS deps
+# Use golang:1.25.1-alpine3.22 - Latest stable with minimal CVEs (0H 0M 3L per Snyk)
+FROM golang:1.25.1-alpine3.22 AS deps
 WORKDIR /app
 RUN apk add --no-cache ca-certificates git build-base
 COPY apps/backend/go.mod apps/backend/go.sum ./ 
