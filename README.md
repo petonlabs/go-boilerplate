@@ -72,6 +72,43 @@ task -C apps/backend docker:up
 
 ```
 
+### Run locally (minimal)
+
+1. Prepare developer env (appends safe dev defaults into `apps/backend/.env`):
+
+```bash
+make check-env
+```
+
+1. Start services with Docker Compose:
+
+```bash
+make docker-up
+# or: docker compose up -d --build
+```
+
+1. Watch backend logs to see which endpoints are available and health checks:
+
+```bash
+docker compose logs --follow backend
+```
+
+Endpoints you can access after startup (defaults):
+
+- Backend root: <http://localhost:8080>
+- Health / status: <http://localhost:8080/health>  (also available at /status)
+- DSPY health: <http://localhost:8080/dspy/health>
+- OpenAPI UI: <http://localhost:8080/docs>
+- Static assets: <http://localhost:8080/static/>
+- Versioned API base: <http://localhost:8080/api/v1/>
+
+Use `curl` to quickly check health:
+
+```bash
+curl -sS <http://localhost:8080/health> | jq .
+```
+
+
 
 
 ### 3. Verify Health```bash```

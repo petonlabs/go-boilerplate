@@ -1,6 +1,7 @@
 # Makefile for common dev tasks (make from repo root)
 
 .PHONY: help docker-up docker-down build backend-run migrations-up migrations-down backup-run test lint
+.PHONY: check-env
 
 help:
 	@echo "Make targets:"
@@ -28,6 +29,11 @@ build:
 # Run backend locally (uses apps/backend/.env). Useful during development.
 backend-run:
 	cd apps/backend && go run ./cmd/go-boilerplate
+
+# Prepare development environment file with safe defaults
+check-env:
+	@echo "Checking and populating developer env (apps/backend/.env) with safe defaults"
+	./scripts/check-dev-env.sh --fix
 
 # Migrations (require tern installed). Provide DB_DSN, otherwise falls back to postgres defaults.
 migrations-up:
