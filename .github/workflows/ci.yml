@@ -28,7 +28,7 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ matrix.go }}-modules-${{ hashFiles('**/go.sum') }}
+          key: ${{ runner.os }}-go-${{ matrix.go }}-modules-${{ hashFiles('apps/backend/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-${{ matrix.go }}-modules-
 
@@ -39,8 +39,26 @@ jobs:
 
       - name: Prepare module
         run: |
+          echo "Current directory: $(pwd)"
+          echo "Go version: $(go version)"
           go env -w GOPROXY=https://proxy.golang.org,direct
           go mod download
+          go mod verify
+          echo "Module download complete"
+
+      - name: Verify critical imports
+        run: |
+          echo "Checking critical imports in go.mod..."
+          for pkg in "github.com/labstack/echo/v4" "github.com/clerk/clerk-sdk-go/v2" "github.com/go-playground/validator/v10" "github.com/jackc/pgx/v5" "github.com/redis/go-redis/v9"; do
+            if grep -q "$pkg" go.mod; then
+              echo "✓ $pkg present"
+            else
+              echo "✗ $pkg MISSING"
+              exit 1
+            fi
+          done
+          echo "Listing downloaded modules..."
+          go list -m all | head -20
 
       - name: Check formatting
         run: |
