@@ -62,9 +62,8 @@ func LoadConfig() (*Config, error) {
 
 	k := koanf.New(".")
 
-	err := k.Load(env.Provider("", ".", func(s string) string {
-		return strings.ToLower(s)
-	}), nil)
+	// Use strings.ToLower directly instead of wrapping in lambda
+	err := k.Load(env.Provider("", ".", strings.ToLower), nil)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("could not load initial env variables")
 	}

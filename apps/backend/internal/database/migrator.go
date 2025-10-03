@@ -36,7 +36,9 @@ func Migrate(ctx context.Context, logger *zerolog.Logger, cfg *config.Config) er
 	if err != nil {
 		return err
 	}
-	defer conn.Close(ctx)
+	defer func() {
+		_ = conn.Close(ctx)
+	}()
 
 	m, err := tern.NewMigrator(ctx, conn, "schema_version")
 	if err != nil {
@@ -56,10 +58,15 @@ func Migrate(ctx context.Context, logger *zerolog.Logger, cfg *config.Config) er
 	if err := m.Migrate(ctx); err != nil {
 		return err
 	}
-	if from == int32(len(m.Migrations)) {
-		logger.Info().Msgf("database schema up to date, version %d", len(m.Migrations))
+	// Check for potential overflow before conversion
+	migrationCount := len(m.Migrations)
+	if migrationCount > int(^int32(0)) {
+		return fmt.Errorf("migration count exceeds int32 range")
+	}
+	if from == int32(migrationCount) {
+		logger.Info().Msgf("database schema up to date, version %d", migrationCount)
 	} else {
-		logger.Info().Msgf("migrated database schema, from %d to %d", from, len(m.Migrations))
+		logger.Info().Msgf("migrated database schema, from %d to %d", from, migrationCount)
 	}
 	return nil
 }

@@ -791,7 +791,42 @@ go tool cover -html=coverage.out
 
 ---
 
-## 📝 License
+## � Documentation
+
+Comprehensive documentation is available in the [`docs/`](./docs/) folder:
+
+### 📖 Core Guides
+
+| Document | Description | For |
+|----------|-------------|-----|
+| [**Best Practices**](./docs/BEST_PRACTICES.md) | Development workflow, debugging, and coding standards | All developers |
+| [**CI Improvements**](./docs/CI_IMPROVEMENTS.md) | CI/CD pipeline setup and troubleshooting | DevOps, CI debugging |
+| [**Module Configuration**](./docs/MODULE_CONFIGURATION.md) | Detailed dependency documentation | Architecture, updates |
+| [**Dependency Audit**](./docs/DEPENDENCY_AUDIT.md) | Security audits and verification | Security, compliance |
+| [**Linting Issues**](./docs/LINTING_ISSUES.md) | Historical fixes and lessons learned | Code review, learning |
+
+### 🎯 Quick Links
+
+- **New to the project?** Start with [Best Practices](./docs/BEST_PRACTICES.md)
+- **CI failing?** Check [CI Improvements](./docs/CI_IMPROVEMENTS.md)
+- **Need to debug?** See [Debugging section](./docs/BEST_PRACTICES.md#debugging-techniques)
+- **Updating dependencies?** Read [Module Configuration](./docs/MODULE_CONFIGURATION.md)
+
+### 📊 What's Documented
+
+- ✅ Development workflow and pre-commit checks
+- ✅ Code quality standards with examples
+- ✅ Testing best practices (unit, integration, testcontainers)
+- ✅ Security guidelines and vulnerability management
+- ✅ Debugging techniques (local and CI)
+- ✅ CI/CD pipeline architecture and optimization
+- ✅ Complete dependency rationale and configuration
+- ✅ Common issues and solutions
+- ✅ Quick reference commands
+
+---
+
+## �📝 License
 
 See [LICENSE](LICENSE) for details.
 

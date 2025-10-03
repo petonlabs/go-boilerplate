@@ -38,11 +38,13 @@ func main() {
 			fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
 			os.Exit(1)
 		}
-		defer resp.Body.Close()
+		// Close body before os.Exit to avoid exitAfterDefer issue
 		if resp.StatusCode != http.StatusOK {
+			_ = resp.Body.Close()
 			fmt.Fprintf(os.Stderr, "healthcheck failed: status %d\n", resp.StatusCode)
 			os.Exit(1)
 		}
+		_ = resp.Body.Close()
 		os.Exit(0)
 	}
 
@@ -51,6 +53,13 @@ func main() {
 		panic("failed to load config: " + err.Error())
 	}
 
+	if err := run(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "application error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(cfg *config.Config) error {
 	// Initialize New Relic logger service
 	loggerService := logger.NewLoggerService(cfg.Observability)
 	defer loggerService.Shutdown()
@@ -59,21 +68,21 @@ func main() {
 
 	if cfg.Primary.Env != "local" {
 		if err := database.Migrate(context.Background(), &log, cfg); err != nil {
-			log.Fatal().Err(err).Msg("failed to migrate database")
+			return fmt.Errorf("failed to migrate database: %w", err)
 		}
 	}
 
 	// Initialize server
 	srv, err := server.New(cfg, &log, loggerService)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize server")
+		return fmt.Errorf("failed to initialize server: %w", err)
 	}
 
 	// Initialize repositories, services, and handlers
 	repos := repository.NewRepositories(srv)
 	services, serviceErr := service.NewServices(srv, repos)
 	if serviceErr != nil {
-		log.Fatal().Err(serviceErr).Msg("could not create services")
+		return fmt.Errorf("could not create services: %w", serviceErr)
 	}
 	handlers := handler.NewHandlers(srv, services)
 
@@ -84,23 +93,25 @@ func main() {
 	srv.SetupHTTPServer(r)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 
 	// Start server
 	go func() {
 		if err = srv.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal().Err(err).Msg("failed to start server")
+			log.Error().Err(err).Msg("failed to start server")
 		}
 	}()
 
 	// Wait for interrupt signal to gracefully shutdown the server
 	<-ctx.Done()
-	ctx, cancel := context.WithTimeout(context.Background(), DefaultContextTimeout*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), DefaultContextTimeout*time.Second)
+	defer cancel()
 
-	if err = srv.Shutdown(ctx); err != nil {
-		log.Fatal().Err(err).Msg("server forced to shutdown")
+	if err = srv.Shutdown(shutdownCtx); err != nil {
+		log.Error().Err(err).Msg("server forced to shutdown")
+		return fmt.Errorf("server shutdown error: %w", err)
 	}
-	stop()
-	cancel()
 
 	log.Info().Msg("server exited properly")
+	return nil
 }

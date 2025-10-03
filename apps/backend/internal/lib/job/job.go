@@ -54,5 +54,7 @@ func (j *JobService) Start() error {
 func (j *JobService) Stop() {
 	j.logger.Info().Msg("Stopping background job server")
 	j.server.Shutdown()
-	j.Client.Close()
+	if err := j.Client.Close(); err != nil {
+		j.logger.Warn().Err(err).Msg("Error closing job client")
+	}
 }
