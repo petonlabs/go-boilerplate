@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -48,60 +49,67 @@ func validateStruct(v Validatable) (string, []errs.FieldError) {
 
 func extractValidationErrors(err error) (string, []errs.FieldError) {
 	var fieldErrors []errs.FieldError
-	validationErrors, ok := err.(validator.ValidationErrors)
-	if !ok {
-		customValidationErrors := err.(CustomValidationErrors)
+
+	// Use errors.As for type assertion to handle wrapped errors properly
+	var validationErrors validator.ValidationErrors
+	if errors.As(err, &validationErrors) {
+		for _, err := range validationErrors {
+			field := strings.ToLower(err.Field())
+			var msg string
+
+			switch err.Tag() {
+			case "required":
+				msg = "is required"
+			case "min":
+				if err.Type().Kind() == reflect.String {
+					msg = fmt.Sprintf("must be at least %s characters", err.Param())
+				} else {
+					msg = fmt.Sprintf("must be at least %s", err.Param())
+				}
+			case "max":
+				if err.Type().Kind() == reflect.String {
+					msg = fmt.Sprintf("must not exceed %s characters", err.Param())
+				} else {
+					msg = fmt.Sprintf("must not exceed %s", err.Param())
+				}
+			case "oneof":
+				msg = fmt.Sprintf("must be one of: %s", err.Param())
+			case "email":
+				msg = "must be a valid email address"
+			case "e164":
+				msg = "must be a valid phone number with country code"
+			case "uuid":
+				msg = "must be a valid UUID"
+			case "uuidList":
+				msg = "must be a comma-separated list of valid UUIDs"
+			case "dive":
+				msg = "some items are invalid"
+			default:
+				if err.Param() != "" {
+					msg = fmt.Sprintf("%s: %s:%s", field, err.Tag(), err.Param())
+				} else {
+					msg = fmt.Sprintf("%s: %s", field, err.Tag())
+				}
+			}
+
+			fieldErrors = append(fieldErrors, errs.FieldError{
+				Field: field,
+				Error: msg,
+			})
+		}
+		return "Validation failed", fieldErrors
+	}
+
+	// Check for custom validation errors
+	var customValidationErrors CustomValidationErrors
+	if errors.As(err, &customValidationErrors) {
 		for _, err := range customValidationErrors {
 			fieldErrors = append(fieldErrors, errs.FieldError{
 				Field: err.Field,
 				Error: err.Message,
 			})
 		}
-	}
-
-	for _, err := range validationErrors {
-		field := strings.ToLower(err.Field())
-		var msg string
-
-		switch err.Tag() {
-		case "required":
-			msg = "is required"
-		case "min":
-			if err.Type().Kind() == reflect.String {
-				msg = fmt.Sprintf("must be at least %s characters", err.Param())
-			} else {
-				msg = fmt.Sprintf("must be at least %s", err.Param())
-			}
-		case "max":
-			if err.Type().Kind() == reflect.String {
-				msg = fmt.Sprintf("must not exceed %s characters", err.Param())
-			} else {
-				msg = fmt.Sprintf("must not exceed %s", err.Param())
-			}
-		case "oneof":
-			msg = fmt.Sprintf("must be one of: %s", err.Param())
-		case "email":
-			msg = "must be a valid email address"
-		case "e164":
-			msg = "must be a valid phone number with country code"
-		case "uuid":
-			msg = "must be a valid UUID"
-		case "uuidList":
-			msg = "must be a comma-separated list of valid UUIDs"
-		case "dive":
-			msg = "some items are invalid"
-		default:
-			if err.Param() != "" {
-				msg = fmt.Sprintf("%s: %s:%s", field, err.Tag(), err.Param())
-			} else {
-				msg = fmt.Sprintf("%s: %s", field, err.Tag())
-			}
-		}
-
-		fieldErrors = append(fieldErrors, errs.FieldError{
-			Field: strings.ToLower(err.Field()),
-			Error: msg,
-		})
+		return "Validation failed", fieldErrors
 	}
 
 	return "Validation failed", fieldErrors

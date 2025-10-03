@@ -10,10 +10,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// Define custom type for context keys to avoid collisions
+type contextKey string
+
 const (
 	UserIDKey   = "user_id"
 	UserRoleKey = "user_role"
-	LoggerKey   = "logger"
+	// Use custom type for context key
+	LoggerKey contextKey = "logger"
 )
 
 type ContextEnhancer struct {
@@ -52,10 +56,10 @@ func (ce *ContextEnhancer) EnhanceContext() echo.MiddlewareFunc {
 				contextLogger = contextLogger.With().Str("user_role", userRole).Logger()
 			}
 
-			// Store the enhanced logger in context
-			c.Set(LoggerKey, &contextLogger)
+			// Store the enhanced logger in Echo context (using string key for Echo)
+			c.Set(string(LoggerKey), &contextLogger)
 
-			// Create a new context with the logger
+			// Create a new context with the logger (using custom type for standard context)
 			ctx := context.WithValue(c.Request().Context(), LoggerKey, &contextLogger)
 			c.SetRequest(c.Request().WithContext(ctx))
 
@@ -88,7 +92,8 @@ func GetUserID(c echo.Context) string {
 }
 
 func GetLogger(c echo.Context) *zerolog.Logger {
-	if logger, ok := c.Get(LoggerKey).(*zerolog.Logger); ok {
+	// Use string key for Echo context
+	if logger, ok := c.Get(string(LoggerKey)).(*zerolog.Logger); ok {
 		return logger
 	}
 	// Fallback to a basic logger if not found
