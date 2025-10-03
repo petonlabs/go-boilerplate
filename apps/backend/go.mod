@@ -1,6 +1,6 @@
 module github.com/petonlabs/go-boilerplate
 
-go 1.24.1
+go 1.25.0
 
 require (
 	github.com/XiaoConstantine/dspy-go v0.62.0
