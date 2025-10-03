@@ -4,7 +4,7 @@ go 1.24.5
 
 require (
 	github.com/XiaoConstantine/dspy-go v0.62.0
-	github.com/clerk/clerk-sdk-go/v2 v2.3.1
+	github.com/clerk/clerk-sdk-go/v2 v2.4.2
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/google/uuid v1.6.0
 	github.com/hibiken/asynq v0.25.1
