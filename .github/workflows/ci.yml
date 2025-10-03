@@ -17,7 +17,7 @@ jobs:
         working-directory: apps/backend
     strategy:
       matrix:
-        go: [ '1.22', '1.23' ]
+        go: [ '1.24', '1.25' ]
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
