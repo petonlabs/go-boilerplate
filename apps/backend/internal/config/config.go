@@ -63,7 +63,17 @@ func LoadConfig() (*Config, error) {
 	k := koanf.New(".")
 
 	// Use strings.ToLower directly instead of wrapping in lambda
-	err := k.Load(env.Provider("", ".", strings.ToLower), nil)
+	// Map environment variables to koanf keys. We want SERVER_READ_TIMEOUT
+	// -> server.read_timeout so we replace the FIRST underscore with a dot
+	// and lowercase the rest. The env.Provider transform runs before
+	// splitting by the delimiter, so we set the delimiter to '.' and use a
+	// transform that lowercases and converts the first '_' to '.'.
+	// Use double underscore as a delimiter so environment variables like
+	// OBSERVABILITY__NEW_RELIC__LICENSE_KEY become
+	// observability.new_relic.license_key which matches the koanf struct
+	// tags. Keep transform simple (lowercase) because the delimiter handles
+	// splitting into segments.
+	err := k.Load(env.Provider("", "__", strings.ToLower), nil)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("could not load initial env variables")
 	}

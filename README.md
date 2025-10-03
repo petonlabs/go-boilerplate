@@ -773,6 +773,37 @@ task migrations:up     # Apply migrations
 
 ---
 
+## Local development
+
+Use the provided helpers to start the full stack and developer servers.
+
+- Makefile (root): common targets for Docker, migrations, tests and linting.
+  - Start stack: `make docker-up`
+  - Stop stack: `make docker-down`
+  - Apply migrations: `make migrations-up`
+  - Run backend locally: `make backend-run`
+  - Run tests: `make test`
+
+- Or use the orchestration script which brings up docker-compose, waits for services, runs migrations and starts backend and frontend dev servers:
+
+```bash
+# start everything (backend + DB + redis + frontend)
+scripts/dev-start.sh
+
+# skip the frontend
+scripts/dev-start.sh --no-frontend
+
+# run backend in foreground for debugging
+scripts/dev-start.sh --foreground
+```
+
+Notes:
+
+- The passwords included in `docker-compose.yml` are development defaults only. Replace them with proper secrets in production or CI.
+- The script expects Docker to be installed. `tern` is used for migrations when available. The frontend path uses `bun` or `npm` if present.
+
+---
+
 ## 🧪 Testing
 
 ### Run Go Tests
