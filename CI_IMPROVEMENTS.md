@@ -61,7 +61,37 @@ go mod tidy
 
 ---
 
-### 3. **Modernized CI Workflow Architecture** ✅
+### 3. **Fixed Mapstructure Vulnerability** ✅
+
+**Issue:** Security vulnerability in mapstructure library:
+```
+Module: github.com/go-viper/mapstructure/v2
+Found in: v2.3.0
+Fixed in: v2.4.0
+Affected file: internal/config/config.go (line 73, Unmarshal call)
+```
+
+**Solution:**
+```bash
+go get github.com/go-viper/mapstructure/v2@v2.4.0
+go mod tidy
+```
+
+**Files Modified:**
+- `apps/backend/go.mod` (mapstructure dependency updated)
+- `apps/backend/go.sum` (checksums updated)
+
+**Verification:**
+```bash
+✅ go list -m github.com/go-viper/mapstructure/v2 - v2.4.0
+✅ go mod verify - all modules verified
+✅ go build - successful compilation
+✅ govulncheck ./... - No vulnerabilities found
+```
+
+---
+
+### 4. **Modernized CI Workflow Architecture** ✅
 
 **Before:** Single monolithic job with all checks  
 **After:** Separated into logical jobs for better parallelization and clarity
@@ -206,12 +236,14 @@ linters:
 ## ✅ Verification Checklist
 
 - [x] Docker SDK updated to v28.3.3+incompatible
+- [x] Mapstructure updated to v2.4.0
 - [x] golangci-lint-action upgraded to v7
 - [x] golangci-lint configuration validated
 - [x] All 12 linting issues fixed
 - [x] go mod verify passes
 - [x] go build succeeds
 - [x] golangci-lint run passes (0 issues)
+- [x] govulncheck passes (no vulnerabilities)
 - [x] Workflow syntax validated
 - [x] Cache strategy optimized
 - [x] Security scans separated
@@ -230,6 +262,7 @@ linters:
    
    - Update golangci-lint-action to v7 for v2.x support
    - Fix Docker SDK vulnerability (v28.2.2 → v28.3.3)
+   - Fix mapstructure vulnerability (v2.3.0 → v2.4.0)
    - Separate security scans into dedicated job
    - Add test coverage reporting
    - Optimize build with stripped binaries
@@ -257,13 +290,14 @@ linters:
 - [GitHub Actions best practices](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions)
 - [Go security best practices](https://go.dev/security/best-practices)
 - [Docker SDK vulnerability advisory](https://github.com/moby/moby/security/advisories)
+- [Mapstructure v2.4.0 release notes](https://github.com/go-viper/mapstructure/releases/tag/v2.4.0)
 
 ---
 
 ## 🎉 Summary
 
-**Total Improvements:** 10+  
-**Security Fixes:** 1 critical vulnerability  
+**Total Improvements:** 11  
+**Security Fixes:** 2 critical vulnerabilities (Docker SDK, mapstructure)  
 **Performance Gains:** ~30% faster CI, smaller binaries  
 **Code Quality:** 0 linting issues (from 132 noise + 12 real bugs)  
 **Maintainability:** Cleaner, more maintainable workflow  
