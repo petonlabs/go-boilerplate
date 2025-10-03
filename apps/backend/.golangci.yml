@@ -4,15 +4,15 @@ run:
   timeout: 3m
 
 linters:
-  default: none
   enable:
+    # Default linters (always enabled)
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - typecheck
     - unused
+    
+    # Additional recommended linters
     - asasalint
     - asciicheck
     - bidichk
@@ -36,7 +36,6 @@ linters:
     - goconst
     - gocritic
     - gocyclo
-    - goimports
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -66,7 +65,6 @@ linters:
     - sloglint
     - spancheck
     - sqlclosecheck
-    - stylecheck
 
     - testableexamples
     - testifylint
