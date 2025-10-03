@@ -58,9 +58,11 @@ func Migrate(ctx context.Context, logger *zerolog.Logger, cfg *config.Config) er
 	if err := m.Migrate(ctx); err != nil {
 		return err
 	}
-	// Check for potential overflow before conversion
+	// Check for potential overflow before conversion. int(^int32(0)) is -1
+	// so the previous check always triggered. Use a proper MaxInt32 value.
 	migrationCount := len(m.Migrations)
-	if migrationCount > int(^int32(0)) {
+	const maxInt32 = 1<<31 - 1
+	if migrationCount > maxInt32 {
 		return fmt.Errorf("migration count exceeds int32 range")
 	}
 	if from == int32(migrationCount) {

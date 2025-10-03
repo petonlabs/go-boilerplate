@@ -1,28 +1,11 @@
-version: "3.9"
-
 services:
   backend:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
     image: go-boilerplate/backend:latest
-    environment:
-      # Unprefixed envs (see .env.example below)
-      SERVER_PORT: "8080"
-      DATABASE_HOST: postgres
-      DATABASE_PORT: "5432"
-      DATABASE_USER: app
-      DATABASE_PASSWORD: app
-      DATABASE_NAME: app
-      DATABASE_SSLMODE: disable
-      REDIS_ADDR: redis:6379
-      REDIS_PASSWORD: ""
-      # DSPY (Azure)
-      DSPY_ENABLED: "true"
-      DSPY_PROVIDER: "azure"
-      DSPY_AZURE_ENDPOINT: ${DSPY_AZURE_ENDPOINT}
-      DSPY_AZURE_API_KEY: ${DSPY_AZURE_API_KEY}
-      DSPY_MODEL: "gpt-5-mini"
+    env_file:
+      - ./apps/backend/.env
     depends_on:
       - postgres
       - redis

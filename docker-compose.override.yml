@@ -1,0 +1,12 @@
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+  redis:
+    ports:
+      - "6379:6379"
+
+# This override file is optional. It exposes Postgres and Redis on the host
+# so GUI tools (DataGrip, pgAdmin, redis-cli on host) can connect to
+# localhost:5432 and localhost:6379. Only enable if you understand the
+# security/port-collision implications: `docker compose -f docker-compose.yml -f docker-compose.override.yml up -d`
