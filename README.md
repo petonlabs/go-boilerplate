@@ -54,161 +54,241 @@ Fill in the values (especially `DSPY_*` and `S3_*` credentials). **Never commit 
 
 ```bash
 
-# Install dependencies- **API Documentation**: OpenAPI/Swagger specification
+    "redis": { "response_time": "496.792µs", "status": "healthy" }
+# Go Boilerplate
 
-bun install
+A production-oriented monorepo template with a Dockerized Go backend, PostgreSQL, Redis, automated backups to S3-compatible storage (Cloudflare R2), and optional DSPy (Azure AI) integration.
 
-cd apps/backend && go mod download## 🚀 Quick Start- **Security**: Rate limiting, CORS, secure headers, and JWT validation
+This README is organized into chapters to make onboarding easier. Each chapter is short and actionable — follow the Quick Start first, then dig into other sections as needed.
 
+--
 
+## Chapters
 
-# Build and start the stack
+1. Quick start
+2. Local development
+3. Accessing services
+4. Environment variables reference
+5. Backups & restore
+6. Tasks & tooling
+7. Testing
+8. Production notes
+9. Contributing & license
 
-cd ../..
+---
 
-task -C apps/backend docker:build### 1. Copy environment variables## Project Structure
+## 1) Quick start (get running in ~5 minutes)
 
-task -C apps/backend docker:up
+Prerequisites: Docker & Docker Compose, Go 1.24+, (optional) bun/npm for frontend.
 
-```
-
-### Run locally (minimal)
-
-1. Prepare developer env (appends safe dev defaults into `apps/backend/.env`):
+1. Copy example env into `apps/backend/.env` and edit secrets (do not commit secrets):
 
 ```bash
+cp apps/backend/.env.example apps/backend/.env
+# or run the helper that appends safe dev defaults
 make check-env
 ```
 
-1. Start services with Docker Compose:
+2. Start the stack:
 
 ```bash
 make docker-up
 # or: docker compose up -d --build
 ```
 
-1. Watch backend logs to see which endpoints are available and health checks:
+3. Verify the backend is healthy:
 
 ```bash
-docker compose logs --follow backend
+curl -sS http://localhost:8080/health | python3 -m json.tool
 ```
 
-Endpoints you can access after startup (defaults):
-
-- Backend root: <http://localhost:8080>
-- Health / status: <http://localhost:8080/health>  (also available at /status)
-- DSPY health: <http://localhost:8080/dspy/health>
-- OpenAPI UI: <http://localhost:8080/docs>
-- Static assets: <http://localhost:8080/static/>
-- Versioned API base: <http://localhost:8080/api/v1/>
-
-Use `curl` to quickly check health:
-
-```bash
-curl -sS <http://localhost:8080/health> | jq .
-```
-
-
-
-
-### 3. Verify Health```bash```
-
-
-
-- **Backend**: <http://localhost:8080/health>cp apps/backend/.env.example apps/backend/.envgo-boilerplate/
-
-- **dspy-go health**: <http://localhost:8080/dspy/health>
-
-```├── apps/backend/          # Go backend application
+If you see `{"status":"healthy", ...}` you're good to go.
 
 ---
 
-├── packages/         # Frontend packages (React, Vue, etc.)
+## 2) Local development
 
-## 📦 Coolify Deployment
-
-Fill in the values (especially `DSPY_*` and `S3_*` credentials). **Never commit secrets.**├── package.json      # Monorepo configuration
-
-### Application Setup
-
-├── turbo.json        # Turborepo configuration
-
-1. **Create a new Application** in Coolify
-
-2. **Configure Build**:### 2. Local Development└── README.md         # This file
-
-   - Dockerfile: `apps/backend/Dockerfile`
-
-   - Build context: repository root```
-
-   - Exposed port: `8080`
+- Build backend binary (local):
 
 ```bash
+make build
+```
 
-3. **Set Environment Variables** (via Coolify Secrets):
-
-# Install dependencies## Quick Start
+- Run backend locally (uses `apps/backend/.env`):
 
 ```bash
+make backend-run
+```
 
-# Serverbun install
+- Bring full dev environment up (DB, Redis, backup runner):
 
-SERVER_PORT=8080
+```bash
+make docker-up
+make logs   # follow backend logs
+```
 
-PRIMARY_ENV=productioncd apps/backend && go mod download### Prerequisites
+Notes:
+- The repo intentionally does not expose Postgres/Redis on the host by default for safety. Use the `docker-compose.override.yml` (opt-in) to map ports to localhost if you need GUI tools.
 
+---
 
+## 3) Accessing services (practical recipes)
 
-# Database (use Coolify's managed Postgres or external)
+HTTP (backend)
 
-DATABASE_HOST=<your-postgres-host>
+```bash
+# API base
+http://localhost:8080
 
-DATABASE_PORT=5432# Build and start the stack- Go 1.24 or higher
+# Health
+curl -sS http://localhost:8080/health | python3 -m json.tool
 
-DATABASE_USER=<your-db-user>
+# Open API UI in macOS default browser
+make open-docs
+```
 
-DATABASE_PASSWORD=<your-db-password>cd ../..- Node.js 22+ and Bun
+Postgres (recommended: use compose network)
 
-DATABASE_NAME=<your-db-name>
+```bash
+# interactive psql inside container
+make psql
 
-DATABASE_SSL_MODE=requiretask -C apps/backend docker:build- PostgreSQL 16+
+# single command
 
-DATABASE_MAX_OPEN_CONNS=25
+```
 
-DATABASE_MAX_IDLE_CONNS=5task -C apps/backend docker:up- Redis 8+
+Redis
 
-DATABASE_CONN_MAX_LIFETIME=300
+```bash
+make redis-cli
+```
 
-DATABASE_CONN_MAX_IDLE_TIME=60```
+Backups (list files in the named volume)
 
+```bash
+make list-backups
+```
 
+Optional: expose DB/Redis on host by enabling the included `docker-compose.override.yml` and starting compose with the override.
 
-# Redis### Installation
+---
 
-REDIS_ADDRESS=<your-redis-host>:6379
+## 4) Environment variables reference (high level)
 
-### 3. Verify Health
+All backend environment variables live in `apps/backend/.env` (no `BOILERPLATE_` prefix).
 
-# Auth
+Important keys (see `apps/backend/.env.example` for full list):
 
-AUTH_SECRET_KEY=<generate-strong-key>1. Clone the repository:
+- SERVER_PORT — HTTP port (default: 8080)
+- PRIMARY_ENV — environment name (development|production)
+- DATABASE_HOST, DATABASE_PORT, DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME
+- REDIS_ADDRESS — redis host:port (used internally by the container)
+- AUTH_SECRET_KEY — secret for signing tokens
+- INTEGRATION_RESEND_API_KEY — resend email service key
+- OBSERVABILITY_NEWRELIC_LICENSE_KEY — New Relic license key
+- DSPY_* — DSPy (Azure AI) configuration (if enabled)
+- S3_* — credentials for backup destination (Cloudflare R2)
 
+Always keep secrets out of the repository and use environment-specific management for production (Coolify, Kubernetes Secrets, etc.).
 
+---
 
-# Email (Resend)- **Backend**: http://localhost:8080/health```bash
+## 5) Backups & restore (Cloudflare R2)
 
-INTEGRATION_RESEND_API_KEY=<your-resend-key>
+Backups are implemented via scripts in `scripts/backup` and run by `db-backup` service. By default backup cron is `0 */6 * * *` and retention is 14 days.
 
-- **dspy-go health**: http://localhost:8080/dspy/healthgit clone https://github.com/petonlabs/go-boilerplate.git
+Manual backup (from repo root):
 
-# Observability (optional)
+```bash
+make backup-run
+```
 
-OBSERVABILITY_NEWRELIC_LICENSE_KEY=<your-nr-key>cd go-boilerplate
+Restore example (uses `task` automation in backend Taskfile):
 
-OBSERVABILITY_NEWRELIC_APP_NAME=go-boilerplate
-
+```bash
+# Example (adapt URI):
 ---```
+```
 
+Backups are stored in a Docker named volume `backups` — use `make list-backups` to inspect.
+
+---
+
+## 6) Tasks & tooling
+
+Root Makefile provides common developer targets:
+
+- `make docker-up` / `make docker-down` — start/stop compose stack
+- `make check-env` — populate safe dev defaults in `apps/backend/.env`
+- `make build`, `make backend-run` — local build/run
+- `make migrations-up` / `migrations-down` — run tern migrations
+- `make psql`, `make redis-cli`, `make logs`, `make open-docs`, `make list-backups` — convenience helpers
+
+Backend also has a Taskfile for more advanced automation; see `apps/backend/Taskfile.yml`.
+
+---
+
+## 7) Testing
+
+Run unit tests:
+
+```bash
+cd apps/backend
+
+```
+
+Integration tests requiring Docker:
+
+```bash
+go test -tags=integration ./...
+```
+
+---
+
+## 8) Production notes (concise)
+
+- Use a secrets manager for S3 and DSPy credentials.
+- Enable SSL for DB connections in production via `DATABASE_SSL_MODE=require`.
+- Configure monitoring and alerting (New Relic, logs).
+- Use a reverse proxy (Traefik/Caddy/nginx) for TLS termination and routing.
+
+---
+
+## 9) Contributing & license
+
+- Fork, create a feature branch, run tests and linters, open a PR.
+- This project is MIT licensed — see `LICENSE`.
+
+---
+
+This repository now exposes a set of chaptered documents under `docs/book/` which are suitable for exporting into a book-like tool (for example, WriteBook by ONCE).
+
+See the full chapters in `docs/book/`:
+
+- `docs/book/01-quick-start.md`
+- `docs/book/02-local-development.md`
+- `docs/book/03-accessing-services.md`
+- `docs/book/04-env-reference.md`
+- `docs/book/05-backups-restore.md`
+- `docs/book/06-tasks-tooling.md`
+- `docs/book/07-testing.md`
+- `docs/book/08-production-notes.md`
+- `docs/book/09-contributing-license.md`
+
+Quick start (summary):
+
+```bash
+# prepare env
+make check-env
+
+# start stack
+make docker-up
+
+# confirm health
+curl -sS http://localhost:8080/health | python3 -m json.tool
+```
+
+If you'd like, I can also produce a single export (e.g., a WriteBook-compatible bundle) or refine chapter frontmatter for a specific tool — tell me which target format you prefer.
 # S3 Backups (Cloudflare R2)
 
 S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com

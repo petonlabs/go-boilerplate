@@ -1,7 +1,7 @@
 # Makefile for common dev tasks (make from repo root)
 
 .PHONY: help docker-up docker-down build backend-run migrations-up migrations-down backup-run test lint
-.PHONY: check-env
+.PHONY: check-env psql redis-cli logs open-docs list-backups psql-runner
 
 help:
 	@echo "Make targets:"
@@ -34,6 +34,27 @@ backend-run:
 check-env:
 	@echo "Checking and populating developer env (apps/backend/.env) with safe defaults"
 	./scripts/check-dev-env.sh --fix
+
+# Convenience helpers for local development (safe defaults: run inside compose network)
+psql:
+	docker compose exec postgres psql -U app -d app
+
+redis-cli:
+	docker compose exec redis redis-cli ping
+
+logs:
+	docker compose logs --follow backend
+
+open-docs:
+	@echo "Opening OpenAPI UI at http://localhost:8080/docs"
+	open "http://localhost:8080/docs"
+
+list-backups:
+	docker compose run --rm db-backup ls -la /var/backups || true
+
+# Start a temporary psql client container that connects to the compose network
+psql-runner:
+	docker run --rm -it --network $(shell docker compose ps -q | xargs -I{} docker inspect --format '{{range $k,$v := .NetworkSettings.Networks}}{{printf "%s" $k}}{{end}}' {}) postgres:18-alpine psql -h postgres -U app -d app
 
 # Migrations (require tern installed). Provide DB_DSN, otherwise falls back to postgres defaults.
 migrations-up:
