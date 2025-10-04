@@ -55,6 +55,12 @@ type IntegrationConfig struct {
 
 type AuthConfig struct {
 	SecretKey string `koanf:"secret_key" validate:"required"`
+	// PasswordResetTTL is the default TTL (in seconds) for password reset tokens
+	PasswordResetTTL int `koanf:"password_reset_ttl"`
+	// DeletionDefaultTTL is the default TTL (in seconds) for scheduled deletions
+	DeletionDefaultTTL int `koanf:"deletion_default_ttl"`
+	// WebhookSigningSecret is the Svix/Clerk signing secret used to verify incoming webhooks
+	WebhookSigningSecret string `koanf:"webhook_signing_secret"`
 }
 
 func LoadConfig() (*Config, error) {

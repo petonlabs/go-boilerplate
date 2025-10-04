@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/petonlabs/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/service"
 
 	"github.com/labstack/echo/v4"
 )
@@ -14,9 +15,9 @@ type OpenAPIHandler struct {
 	Handler
 }
 
-func NewOpenAPIHandler(s *server.Server) *OpenAPIHandler {
+func NewOpenAPIHandler(s *server.Server, services *service.Services) *OpenAPIHandler {
 	return &OpenAPIHandler{
-		Handler: NewHandler(s),
+		Handler: NewHandler(s, services),
 	}
 }
 

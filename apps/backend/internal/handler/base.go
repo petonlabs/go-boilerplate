@@ -8,17 +8,19 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/petonlabs/go-boilerplate/internal/middleware"
 	"github.com/petonlabs/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/service"
 	"github.com/petonlabs/go-boilerplate/internal/validation"
 )
 
 // Handler provides base functionality for all handlers
 type Handler struct {
-	server *server.Server
+	server   *server.Server
+	Services *service.Services
 }
 
 // NewHandler creates a new base handler
-func NewHandler(s *server.Server) Handler {
-	return Handler{server: s}
+func NewHandler(s *server.Server, services *service.Services) Handler {
+	return Handler{server: s, Services: services}
 }
 
 // HandlerFunc represents a typed handler function that processes a request and returns a response

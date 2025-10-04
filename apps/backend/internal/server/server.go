@@ -53,6 +53,8 @@ func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.Lo
 
 	// job service
 	jobService := job.NewJobService(logger, cfg)
+	// inject database so job handlers can operate on DB
+	jobService.SetDB(db)
 	jobService.InitHandlers(cfg, logger)
 
 	// Start job server
