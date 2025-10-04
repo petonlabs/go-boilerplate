@@ -31,7 +31,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		logger.Error().Err(err).Msg("invalid register payload")
 		return c.NoContent(http.StatusBadRequest)
 	}
-	id, err := h.Services.Auth.RegisterUser(context.Background(), req.Email, req.Password)
+	id, err := h.services.Auth.RegisterUser(context.Background(), req.Email, req.Password)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to register user")
 		return c.NoContent(http.StatusInternalServerError)
@@ -51,7 +51,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		logger.Error().Err(err).Msg("invalid login payload")
 		return c.NoContent(http.StatusBadRequest)
 	}
-	id, err := h.Services.Auth.Login(context.Background(), req.Email, req.Password)
+	id, err := h.services.Auth.Login(context.Background(), req.Email, req.Password)
 	if err != nil {
 		logger.Info().Err(err).Msg("authentication failed")
 		return c.NoContent(http.StatusUnauthorized)
@@ -70,7 +70,7 @@ func (h *AuthHandler) RequestPasswordReset(c echo.Context) error {
 		logger.Error().Err(err).Msg("invalid payload")
 		return c.NoContent(http.StatusBadRequest)
 	}
-	token, err := h.Services.Auth.RequestPasswordReset(context.Background(), req.Email, time.Duration(h.server.Config.Auth.PasswordResetTTL)*time.Second)
+	token, err := h.services.Auth.RequestPasswordReset(context.Background(), req.Email, time.Duration(h.server.Config.Auth.PasswordResetTTL)*time.Second)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to create password reset token")
 		return c.NoContent(http.StatusInternalServerError)
@@ -91,7 +91,7 @@ func (h *AuthHandler) ResetPassword(c echo.Context) error {
 		logger.Error().Err(err).Msg("invalid payload")
 		return c.NoContent(http.StatusBadRequest)
 	}
-	if err := h.Services.Auth.ResetPassword(context.Background(), req.Token, req.NewPassword); err != nil {
+	if err := h.services.Auth.ResetPassword(context.Background(), req.Token, req.NewPassword); err != nil {
 		logger.Error().Err(err).Msg("failed to reset password")
 		return c.NoContent(http.StatusInternalServerError)
 	}
@@ -116,7 +116,7 @@ func (h *AuthHandler) ScheduleDeletion(c echo.Context) error {
 	if req.Seconds > 0 {
 		ttl = int(req.Seconds)
 	}
-	if err := h.Services.Auth.ScheduleDeletion(context.Background(), req.UserID, time.Duration(ttl)*time.Second); err != nil {
+	if err := h.services.Auth.ScheduleDeletion(context.Background(), req.UserID, time.Duration(ttl)*time.Second); err != nil {
 		logger.Error().Err(err).Msg("failed to schedule deletion")
 		return c.NoContent(http.StatusInternalServerError)
 	}

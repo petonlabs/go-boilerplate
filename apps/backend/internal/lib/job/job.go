@@ -11,10 +11,10 @@ type JobService struct {
 	Client *asynq.Client
 	server *asynq.Server
 	logger *zerolog.Logger
-	DB     *database.Database
+	db     *database.Database
 }
 
-func NewJobService(logger *zerolog.Logger, cfg *config.Config) *JobService {
+func NewJobService(logger *zerolog.Logger, cfg *config.Config, db *database.Database) *JobService {
 	redisAddr := cfg.Redis.Address
 
 	client := asynq.NewClient(asynq.RedisClientOpt{
@@ -37,11 +37,8 @@ func NewJobService(logger *zerolog.Logger, cfg *config.Config) *JobService {
 		Client: client,
 		server: server,
 		logger: logger,
+		db:     db,
 	}
-}
-
-func (j *JobService) SetDB(db *database.Database) {
-	j.DB = db
 }
 
 func (j *JobService) Start() error {

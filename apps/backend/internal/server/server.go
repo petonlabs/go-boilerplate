@@ -51,10 +51,8 @@ func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.Lo
 		// Don't fail startup if Redis is unavailable
 	}
 
-	// job service
-	jobService := job.NewJobService(logger, cfg)
-	// inject database so job handlers can operate on DB
-	jobService.SetDB(db)
+	// job service (inject DB at construction so handlers have access)
+	jobService := job.NewJobService(logger, cfg, db)
 	jobService.InitHandlers(cfg, logger)
 
 	// Start job server

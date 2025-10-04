@@ -26,14 +26,14 @@ func (j *JobService) handleUserDeleteTask(ctx context.Context, t *asynq.Task) er
 
 	j.logger.Info().Str("user_id", p.UserID).Msg("Processing user deletion task")
 
-	if j.DB == nil || j.DB.Pool == nil {
+	if j.db == nil || j.db.Pool == nil {
 		j.logger.Error().Msg("database not available to deletion worker")
 		return fmt.Errorf("db not available")
 	}
 
 	// Ensure the deletion is still scheduled (check deletion_scheduled_at)
 	var scheduledAt *time.Time
-	err := j.DB.Pool.QueryRow(ctx, `SELECT deletion_scheduled_at FROM users WHERE id::text=$1`, p.UserID).Scan(&scheduledAt)
+	err := j.db.Pool.QueryRow(ctx, `SELECT deletion_scheduled_at FROM users WHERE id::text=$1`, p.UserID).Scan(&scheduledAt)
 	if err != nil {
 		j.logger.Error().Err(err).Str("user_id", p.UserID).Msg("failed to query user for deletion")
 		return err
@@ -48,7 +48,7 @@ func (j *JobService) handleUserDeleteTask(ctx context.Context, t *asynq.Task) er
 	}
 
 	// Perform deletion: here we soft-delete by setting deleted_at to now and clearing sensitive fields
-	_, err = j.DB.Pool.Exec(ctx, `UPDATE users SET deleted_at = now(), email = NULL, password_hash = NULL WHERE id::text = $1`, p.UserID)
+	_, err = j.db.Pool.Exec(ctx, `UPDATE users SET deleted_at = now(), email = NULL, password_hash = NULL WHERE id::text = $1`, p.UserID)
 	if err != nil {
 		j.logger.Error().Err(err).Str("user_id", p.UserID).Msg("failed to delete user")
 		return err

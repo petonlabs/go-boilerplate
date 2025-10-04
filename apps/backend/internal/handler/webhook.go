@@ -103,12 +103,12 @@ func (h *WebhookHandler) HandleClerkWebhook(c echo.Context) error {
 	rawJSON, _ := json.Marshal(data)
 
 	// upsert user via service
-	if h.Services == nil || h.Services.Auth == nil {
+	if h.services == nil || h.services.Auth == nil {
 		logger.Error().Msg("auth service not available")
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	if err := h.Services.Auth.SyncUser(context.Background(), clerkID, externalID, firstName, lastName, imageURL, rawJSON); err != nil {
+	if err := h.services.Auth.SyncUser(context.Background(), clerkID, externalID, firstName, lastName, imageURL, rawJSON); err != nil {
 		logger.Error().Err(err).Msg("failed to sync user from webhook")
 		return c.NoContent(http.StatusInternalServerError)
 	}

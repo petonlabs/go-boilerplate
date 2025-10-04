@@ -15,12 +15,12 @@ import (
 // Handler provides base functionality for all handlers
 type Handler struct {
 	server   *server.Server
-	Services *service.Services
+	services *service.Services
 }
 
 // NewHandler creates a new base handler
 func NewHandler(s *server.Server, services *service.Services) Handler {
-	return Handler{server: s, Services: services}
+	return Handler{server: s, services: services}
 }
 
 // HandlerFunc represents a typed handler function that processes a request and returns a response
