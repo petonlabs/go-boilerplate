@@ -3,6 +3,7 @@ package job
 import (
 	"github.com/hibiken/asynq"
 	"github.com/petonlabs/go-boilerplate/internal/config"
+	"github.com/petonlabs/go-boilerplate/internal/database"
 	"github.com/rs/zerolog"
 )
 
@@ -10,6 +11,7 @@ type JobService struct {
 	Client *asynq.Client
 	server *asynq.Server
 	logger *zerolog.Logger
+	DB     *database.Database
 }
 
 func NewJobService(logger *zerolog.Logger, cfg *config.Config) *JobService {
@@ -38,10 +40,15 @@ func NewJobService(logger *zerolog.Logger, cfg *config.Config) *JobService {
 	}
 }
 
+func (j *JobService) SetDB(db *database.Database) {
+	j.DB = db
+}
+
 func (j *JobService) Start() error {
 	// Register task handlers
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(TaskWelcome, j.handleWelcomeEmailTask)
+	mux.HandleFunc(TaskUserDelete, j.handleUserDeleteTask)
 
 	j.logger.Info().Msg("Starting background job server")
 	if err := j.server.Start(mux); err != nil {

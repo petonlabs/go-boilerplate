@@ -15,11 +15,7 @@ import (
 func SetupTest(t *testing.T) (*TestDB, *server.Server, func()) {
 	t.Helper()
 
-	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).
-		Level(zerolog.InfoLevel).
-		With().
-		Timestamp().
-		Logger()
+	logger := zerolog.Nop() // Silent logger for tests
 
 	testDB, dbCleanup := SetupTestDB(t)
 
