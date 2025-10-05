@@ -175,7 +175,7 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 			Auth:        config.AuthConfig{SecretKey: "test-secret"},
 		}
 
-		db, lastErr = connectWithRetry(cfg, &logger, 5)
+		db, lastErr = connectWithRetry(cfg, &logger, 5, nil)
 		require.NoError(t, lastErr, "failed to connect to database via TEST_DATABASE_DSN after multiple attempts")
 
 		// Apply migrations on the external DSN so schema is prepared for tests.
@@ -292,7 +292,7 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 
 	logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
 
-	db, lastErr = connectWithRetry(cfg, &logger, 5)
+	db, lastErr = connectWithRetry(cfg, &logger, 5, nil)
 	require.NoError(t, lastErr, "failed to connect to database after multiple attempts")
 
 	// Apply migrations

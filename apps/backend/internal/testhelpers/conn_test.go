@@ -14,81 +14,65 @@ import (
 )
 
 func TestConnectWithRetry_SuccessFirstAttempt(t *testing.T) {
-	// Save originals and restore after test
-	origNewDB := newDB
-	origPingDB := pingDB
-	defer func() {
-		newDB = origNewDB
-		pingDB = origPingDB
-	}()
-
-	// Override newDB to return a dummy database object
-	newDB = func(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerConfig.LoggerService) (*database.Database, error) {
-		return &database.Database{Pool: &pgxpool.Pool{}}, nil
-	}
-	// Override pingDB to succeed
-	pingDB = func(db *database.Database, ctx context.Context) error {
-		require.NotNil(t, db)
-		return nil
+	t.Parallel()
+	// Use dependency injection via ConnectHooks to avoid mutating package globals
+	hooks := &ConnectHooks{
+		NewDB: func(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerConfig.LoggerService) (*database.Database, error) {
+			return &database.Database{Pool: &pgxpool.Pool{}}, nil
+		},
+		PingDB: func(db *database.Database, ctx context.Context) error {
+			require.NotNil(t, db)
+			return nil
+		},
 	}
 
 	cfg := &config.Config{}
 	logger := zerolog.New(nil)
-	db, err := connectWithRetry(cfg, &logger, 3)
+	db, err := connectWithRetry(cfg, &logger, 3, hooks)
 	require.NoError(t, err)
 	require.NotNil(t, db)
 }
 
 func TestConnectWithRetry_RetryThenSuccess(t *testing.T) {
-	origNewDB := newDB
-	origPingDB := pingDB
-	defer func() {
-		newDB = origNewDB
-		pingDB = origPingDB
-	}()
+	t.Parallel()
 
 	calls := 0
-	// First call returns error, second returns a db
-	newDB = func(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerConfig.LoggerService) (*database.Database, error) {
-		calls++
-		if calls == 1 {
-			return nil, errors.New("temporary failure")
-		}
-		return &database.Database{Pool: &pgxpool.Pool{}}, nil
-	}
-	pingDB = func(db *database.Database, ctx context.Context) error {
-		require.NotNil(t, db)
-		return nil
+	hooks := &ConnectHooks{
+		NewDB: func(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerConfig.LoggerService) (*database.Database, error) {
+			calls++
+			if calls == 1 {
+				return nil, errors.New("temporary failure")
+			}
+			return &database.Database{Pool: &pgxpool.Pool{}}, nil
+		},
+		PingDB: func(db *database.Database, ctx context.Context) error {
+			require.NotNil(t, db)
+			return nil
+		},
 	}
 
 	cfg := &config.Config{}
 	logger := zerolog.New(nil)
-	db, err := connectWithRetry(cfg, &logger, 2)
+	db, err := connectWithRetry(cfg, &logger, 2, hooks)
 	require.NoError(t, err)
 	require.NotNil(t, db)
 	require.Equal(t, 2, calls, "expected two attempts")
 }
 
 func TestConnectWithRetry_AllAttemptsFail(t *testing.T) {
-	origNewDB := newDB
-	origPingDB := pingDB
-	defer func() {
-		newDB = origNewDB
-		pingDB = origPingDB
-	}()
-
-	// Always fail
-	newDB = func(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerConfig.LoggerService) (*database.Database, error) {
-		return nil, errors.New("cannot connect")
-	}
-	// pingDB should not be called, but provide a safe implementation
-	pingDB = func(db *database.Database, ctx context.Context) error {
-		return errors.New("should not be called")
+	t.Parallel()
+	hooks := &ConnectHooks{
+		NewDB: func(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerConfig.LoggerService) (*database.Database, error) {
+			return nil, errors.New("cannot connect")
+		},
+		PingDB: func(db *database.Database, ctx context.Context) error {
+			return errors.New("should not be called")
+		},
 	}
 
 	cfg := &config.Config{}
 	logger := zerolog.Nop()
-	db, err := connectWithRetry(cfg, &logger, 3)
+	db, err := connectWithRetry(cfg, &logger, 3, hooks)
 	require.Error(t, err)
 	require.Nil(t, db)
 }

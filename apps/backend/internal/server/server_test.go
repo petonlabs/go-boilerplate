@@ -47,17 +47,35 @@ func TestGetSetConfigRaceFree(t *testing.T) {
 
 	// writer: swap config a few times
 	for i := 0; i < 1000; i++ {
-		newCfg := srv.GetConfig()
-		if newCfg == nil {
-			newCfg = &config.Config{}
+		// Do not mutate the object returned by GetConfig in-place; allocate a
+		// fresh config and copy fields we need. This ensures we don't accidentally
+		// race on shared memory if GetConfig returns a snapshot that shares
+		// backing data for nested slices/pointers.
+		cur := srv.GetConfig()
+		var newCfg config.Config
+		if cur != nil {
+			newCfg = *cur
+			// copy mutable slice fields
+			if cur.Server.CORSAllowedOrigins != nil {
+				cpy := make([]string, len(cur.Server.CORSAllowedOrigins))
+				copy(cpy, cur.Server.CORSAllowedOrigins)
+				newCfg.Server.CORSAllowedOrigins = cpy
+			}
+			// copy Observability pointer if present
+			if cur.Observability != nil {
+				obs := *cur.Observability
+				newCfg.Observability = &obs
+			}
 		}
+
 		// toggle token secret
 		if i%2 == 0 {
 			newCfg.Auth.TokenHMACSecret = "s1"
 		} else {
 			newCfg.Auth.TokenHMACSecret = "s2"
 		}
-		srv.SetConfig(newCfg)
+
+		srv.SetConfig(&newCfg)
 	}
 
 	// stop readers

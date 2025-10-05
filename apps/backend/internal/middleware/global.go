@@ -23,16 +23,18 @@ func NewGlobalMiddlewares(s *server.Server) *GlobalMiddlewares {
 }
 
 func (global *GlobalMiddlewares) CORS() echo.MiddlewareFunc {
+	// Fail-fast: server and its config must be available when initializing CORS
+	if global.server == nil {
+		panic("middleware.GlobalMiddlewares.CORS: server is nil; pass a non-nil *server.Server when creating GlobalMiddlewares")
+	}
+
+	cfg := global.server.GetConfig()
+	if cfg == nil {
+		panic("middleware.GlobalMiddlewares.CORS: server.GetConfig() returned nil; configuration must be set before initializing middlewares")
+	}
+
 	return middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: func() []string {
-			if global.server == nil {
-				return []string{"*"}
-			}
-			if cfg := global.server.GetConfig(); cfg != nil {
-				return cfg.Server.CORSAllowedOrigins
-			}
-			return []string{"*"}
-		}(),
+		AllowOrigins: cfg.Server.CORSAllowedOrigins,
 	})
 }
 

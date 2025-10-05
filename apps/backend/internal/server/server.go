@@ -159,14 +159,42 @@ func (s *Server) GetTokenHMACSecret() string {
 // This is intended as a deliberate, synchronized persistence path for runtime secret
 // rotation. Callers should ensure secrets are distributed securely in production.
 func (s *Server) SetTokenHMACSecret(newSecret string) {
-	// Load current config, copy, mutate, and store back atomically
-	cfg := s.GetConfig()
-	if cfg == nil {
-		return
+	// Use an atomic compare-and-swap loop to avoid races between Load and Store.
+	// We make a deep-ish copy of mutable fields (slices and pointer sub-structs)
+	// so the new config snapshot does not share backing memory with the old one.
+	for {
+		oldPtr := s.configPtr.Load()
+		if oldPtr == nil {
+			// Nothing to update
+			return
+		}
+
+		// shallow copy of the struct value pointed to by oldPtr
+		copyCfg := *oldPtr
+
+		// copy mutable slice fields to avoid sharing backing arrays
+		if oldPtr.Server.CORSAllowedOrigins != nil {
+			copied := make([]string, len(oldPtr.Server.CORSAllowedOrigins))
+			copy(copied, oldPtr.Server.CORSAllowedOrigins)
+			copyCfg.Server.CORSAllowedOrigins = copied
+		}
+
+		// copy Observability pointer if present
+		if oldPtr.Observability != nil {
+			obs := *oldPtr.Observability
+			copyCfg.Observability = &obs
+		}
+
+		// mutate the copy
+		copyCfg.Auth.TokenHMACSecret = newSecret
+
+		// attempt to swap; if success we're done, otherwise retry
+		if s.configPtr.CompareAndSwap(oldPtr, &copyCfg) {
+			return
+		}
+
+		// CAS failed; loop and retry with latest value
 	}
-	copyCfg := *cfg
-	copyCfg.Auth.TokenHMACSecret = newSecret
-	s.SetConfig(&copyCfg)
 }
 
 // getConfig returns a snapshot copy of the current server config under a
