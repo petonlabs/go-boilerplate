@@ -29,6 +29,30 @@ type Server struct {
 	Job           *job.JobService
 }
 
+// deepCopyConfig returns a deep-ish copy of src suitable for storing in the
+// server's atomic pointer. It handles nil input and copies common mutable
+// fields (slices and pointer sub-structs). Extend this function when new
+// mutable nested fields are added to config.Config.
+func deepCopyConfig(src *config.Config) *config.Config {
+	if src == nil {
+		return nil
+	}
+	dst := *src
+
+	if src.Server.CORSAllowedOrigins != nil {
+		cpy := make([]string, len(src.Server.CORSAllowedOrigins))
+		copy(cpy, src.Server.CORSAllowedOrigins)
+		dst.Server.CORSAllowedOrigins = cpy
+	}
+
+	if src.Observability != nil {
+		obs := *src.Observability
+		dst.Observability = &obs
+	}
+
+	return &dst
+}
+
 func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.LoggerService) (*Server, error) {
 	db, err := database.New(cfg, logger, loggerService)
 	if err != nil {
@@ -169,27 +193,13 @@ func (s *Server) SetTokenHMACSecret(newSecret string) {
 			return
 		}
 
-		// shallow copy of the struct value pointed to by oldPtr
-		copyCfg := *oldPtr
-
-		// copy mutable slice fields to avoid sharing backing arrays
-		if oldPtr.Server.CORSAllowedOrigins != nil {
-			copied := make([]string, len(oldPtr.Server.CORSAllowedOrigins))
-			copy(copied, oldPtr.Server.CORSAllowedOrigins)
-			copyCfg.Server.CORSAllowedOrigins = copied
-		}
-
-		// copy Observability pointer if present
-		if oldPtr.Observability != nil {
-			obs := *oldPtr.Observability
-			copyCfg.Observability = &obs
-		}
+		copyCfg := deepCopyConfig(oldPtr)
 
 		// mutate the copy
 		copyCfg.Auth.TokenHMACSecret = newSecret
 
 		// attempt to swap; if success we're done, otherwise retry
-		if s.configPtr.CompareAndSwap(oldPtr, &copyCfg) {
+		if s.configPtr.CompareAndSwap(oldPtr, copyCfg) {
 			return
 		}
 
@@ -208,24 +218,8 @@ func (s *Server) getConfig() *config.Config {
 	if p == nil {
 		return nil
 	}
-	// Shallow copy top-level struct
-	cfg := *p
-
-	// Copy slice fields to avoid shared backing arrays
-	if cfg.Server.CORSAllowedOrigins != nil {
-		copied := make([]string, len(cfg.Server.CORSAllowedOrigins))
-		copy(copied, cfg.Server.CORSAllowedOrigins)
-		cfg.Server.CORSAllowedOrigins = copied
-	}
-
-	// Deep copy Observability pointer if present
-	if p.Observability != nil {
-		obs := *p.Observability
-		// If Observability contains slices/pointers, copy them here as needed
-		cfg.Observability = &obs
-	}
-
-	return &cfg
+	// Use helper to produce a safe copy
+	return deepCopyConfig(p)
 }
 
 // GetConfig returns a snapshot of the current server config. It is safe for
@@ -243,15 +237,6 @@ func (s *Server) SetConfig(cfg *config.Config) {
 		s.configPtr.Store(nil)
 		return
 	}
-	copyCfg := *cfg
-	if cfg.Server.CORSAllowedOrigins != nil {
-		copied := make([]string, len(cfg.Server.CORSAllowedOrigins))
-		copy(copied, cfg.Server.CORSAllowedOrigins)
-		copyCfg.Server.CORSAllowedOrigins = copied
-	}
-	if cfg.Observability != nil {
-		obs := *cfg.Observability
-		copyCfg.Observability = &obs
-	}
-	s.configPtr.Store(&copyCfg)
+	copyCfg := deepCopyConfig(cfg)
+	s.configPtr.Store(copyCfg)
 }
