@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/newrelic/go-agent/v3/integrations/nrredis-v9"
@@ -24,6 +25,9 @@ type Server struct {
 	Redis         *redis.Client
 	httpServer    *http.Server
 	Job           *job.JobService
+	// configMu protects concurrent access to Server.Config for runtime updates.
+	// Use the provided accessor methods to read or write config fields at runtime.
+	configMu sync.RWMutex
 }
 
 func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.LoggerService) (*Server, error) {
@@ -115,4 +119,27 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// GetTokenHMACSecret returns the current TokenHMACSecret from the server config
+// under a read lock. It returns an empty string if Config or Auth is nil.
+func (s *Server) GetTokenHMACSecret() string {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+	if s.Config == nil {
+		return ""
+	}
+	return s.Config.Auth.TokenHMACSecret
+}
+
+// SetTokenHMACSecret sets the TokenHMACSecret in the server config under a write lock.
+// This is intended as a deliberate, synchronized persistence path for runtime secret
+// rotation. Callers should ensure secrets are distributed securely in production.
+func (s *Server) SetTokenHMACSecret(newSecret string) {
+	s.configMu.Lock()
+	defer s.configMu.Unlock()
+	if s.Config == nil {
+		return
+	}
+	s.Config.Auth.TokenHMACSecret = newSecret
 }

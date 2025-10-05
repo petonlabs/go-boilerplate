@@ -33,6 +33,11 @@ func TestAdminRotateSecretsEndpoint(t *testing.T) {
 
 	require.NoError(t, h.Admin.RotateSecrets(c))
 	require.Equal(t, http.StatusOK, rec.Code)
+	// Verify that the server config was updated with the raw secrets string
+	require.Equal(t, "s1,s2", testServer.Config.Auth.TokenHMACSecret)
+	// And that the Auth service in-memory parsed slice matches expectations
+	got := services.Auth.GetTokenSecrets()
+	require.Equal(t, []string{"s1", "s2"}, got)
 }
 
 func TestAdminRotateSecretsEndpoint_Unauthorized(t *testing.T) {

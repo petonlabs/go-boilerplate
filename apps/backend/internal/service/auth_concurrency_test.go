@@ -16,7 +16,7 @@ func TestRotateSecretsConcurrency(t *testing.T) {
 	svc := NewAuthService(testServer)
 
 	// initialize with known secrets
-	err := svc.RotateTokenHMACSecrets("s1,s2,s3")
+	err := svc.RotateTokenHMACSecrets("s1,s2,s3", "test")
 	if err != nil {
 		t.Fatalf("failed to set initial secrets: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestRotateSecretsConcurrency(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 20; i++ {
-			err := svc.RotateTokenHMACSecrets("a" + time.Now().Format("150405.000") + ",b")
+			err := svc.RotateTokenHMACSecrets("a"+time.Now().Format("150405.000")+",b", "test")
 			if err != nil {
 				t.Logf("rotate error: %v", err)
 			}

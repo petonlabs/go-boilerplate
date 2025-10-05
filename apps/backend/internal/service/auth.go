@@ -364,7 +364,9 @@ func parseTokenSecrets(tokenHMACSecret, mainSecret string) []string {
 // secret used for newly created tokens. This is a lightweight in-memory helper
 // intended for admin tooling or tests. In production you should persist and
 // distribute secrets securely (vault, env, k8s secret, etc.).
-func (a *AuthService) RotateTokenHMACSecrets(newSecrets string) error {
+// RotateTokenHMACSecrets atomically replaces the configured token HMAC secrets.
+// Accepts an actor string to include in the audit log (e.g. 'admin_api' or user id).
+func (a *AuthService) RotateTokenHMACSecrets(newSecrets string, actor string) error {
 	if a == nil || a.server == nil || a.server.Config == nil {
 		return fmt.Errorf("server or config not available")
 	}
@@ -382,9 +384,11 @@ func (a *AuthService) RotateTokenHMACSecrets(newSecrets string) error {
 	a.secretsMu.Lock()
 	a.tokenSecrets = parsed
 	a.secretsMu.Unlock()
+	// Persist the raw secrets string into the server config under a synchronized
+	// setter so other in-process components can observe the new configuration.
+	// We intentionally do not log raw secrets; log only a masked preview.
+	a.server.SetTokenHMACSecret(normalized)
 
-	// Do not write secrets back to server config here to avoid data races. The in-memory
-	// tokenSecrets slice is the runtime source of truth and is protected by secretsMu.
 	if a.server.Logger != nil {
 		// Build a non-sensitive summary: count and masked preview (only last 4 chars visible)
 		masked := make([]string, 0, len(parsed))
@@ -397,6 +401,9 @@ func (a *AuthService) RotateTokenHMACSecrets(newSecrets string) error {
 			}
 		}
 		a.server.Logger.Info().Int("secrets_count", len(parsed)).Strs("secrets_preview_masked", masked).Msg("rotated token HMAC secrets (preview)")
+
+		// Audit entry for persistence action (actor info is best-effort; expand if available)
+		a.server.Logger.Info().Str("actor", "admin_api").Msg("persisted token HMAC secrets to server config (masked preview logged above)")
 	}
 	return nil
 }

@@ -147,7 +147,7 @@ func TestRotateTokenHMACSecrets(t *testing.T) {
 	require.NotEmpty(t, tokenOld)
 
 	// rotate to new secret
-	err = authSvc.RotateTokenHMACSecrets("secret-new,secret-old")
+	err = authSvc.RotateTokenHMACSecrets("secret-new,secret-old", "test")
 	require.NoError(t, err)
 
 	// Reset using old token must succeed because Reset attempts all secrets.

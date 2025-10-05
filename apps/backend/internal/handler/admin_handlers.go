@@ -45,9 +45,13 @@ func (h *AdminHandler) RotateSecrets(c echo.Context) error {
 		logger.Error().Msg("rotate payload missing secrets")
 		return echo.NewHTTPError(http.StatusBadRequest, "missing secrets")
 	}
-	if err := h.services.Auth.RotateTokenHMACSecrets(req.Secrets); err != nil {
+	if err := h.services.Auth.RotateTokenHMACSecrets(req.Secrets, "admin_api"); err != nil {
 		logger.Error().Err(err).Msg("failed to rotate secrets")
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+	// Log an audit entry that the secrets were rotated and persisted.
+	if h.server != nil && h.server.Logger != nil {
+		h.server.Logger.Info().Str("actor", "admin_api").Msg("admin rotated token HMAC secrets and persisted to config (masked preview logged by service)")
 	}
 	return c.NoContent(http.StatusOK)
 }
