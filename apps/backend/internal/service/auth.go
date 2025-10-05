@@ -76,22 +76,40 @@ func (a *AuthService) SyncUser(ctx context.Context, clerkID, externalID, email, 
 		return nil
 	}
 
-	// Use a composite unique index on (COALESCE(external_id,''), COALESCE(clerk_id,''))
-	// created by migration 004_users_external_clerk_unique.sql. We can upsert
-	// against that index by referencing its name as a CONSTRAINT with
-	// ON CONFLICT ON CONSTRAINT <index_name> DO UPDATE ...
-	query := `INSERT INTO users (email, clerk_id, external_id, first_name, last_name, image_url, raw_payload, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, now())
-ON CONFLICT ON CONSTRAINT users_external_clerk_unique_idx DO UPDATE SET
-	clerk_id = EXCLUDED.clerk_id,
-	external_id = EXCLUDED.external_id,
-	first_name = EXCLUDED.first_name,
-	last_name = EXCLUDED.last_name,
-	image_url = EXCLUDED.image_url,
-	raw_payload = EXCLUDED.raw_payload;`
+	// Upsert user: some databases in tests or older deployments may not have
+	// the composite constraint the original implementation expected. To be
+	// resilient we perform an insert that does nothing on conflict and then
+	// an update by matching either external_id or clerk_id (case-insensitive
+	// where appropriate). This avoids relying on a specific constraint
+	// name existing in the database schema.
 
-	_, err := a.server.DB.Pool.Exec(ctx, query, email, clerkID, externalID, firstName, lastName, imageURL, rawPayload)
-	return err
+	// Try insert; ON CONFLICT DO NOTHING prevents unique-violation errors
+	// from bubbling up if one of the single-column unique indexes exists.
+	insertQuery := `INSERT INTO users (email, clerk_id, external_id, first_name, last_name, image_url, raw_payload, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, now()) ON CONFLICT DO NOTHING;`
+	if _, err := a.server.DB.Pool.Exec(ctx, insertQuery, email, clerkID, externalID, firstName, lastName, imageURL, rawPayload); err != nil {
+		return err
+	}
+
+	// Update any existing row that matches by external_id or clerk_id. Use
+	// lower(...) comparisons to match the behavior of the unique indexes
+	// created by migrations which use lower(...).
+	updateQuery := `UPDATE users SET
+		email = $1,
+		clerk_id = COALESCE(NULLIF($2, ''), clerk_id),
+		external_id = COALESCE(NULLIF($3, ''), external_id),
+		first_name = $4,
+		last_name = $5,
+		image_url = $6,
+		raw_payload = $7
+	  WHERE (external_id IS NOT NULL AND lower(external_id) = lower($3))
+		 OR (clerk_id IS NOT NULL AND lower(clerk_id) = lower($2));`
+
+	if _, err := a.server.DB.Pool.Exec(ctx, updateQuery, email, clerkID, externalID, firstName, lastName, imageURL, rawPayload); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RegisterUser registers a new user with email and password
