@@ -22,8 +22,8 @@ Unchecked error returns that could lead to bugs:
 cmd/go-boilerplate/main.go:41:24 - resp.Body.Close()
 internal/database/migrator.go:39:18 - conn.Close(ctx)
 internal/lib/job/job.go:57:16 - j.Client.Close()
-internal/testing/transaction.go:22:19 - tx.Rollback(ctx)
-internal/testing/transaction.go:47:19 - tx.Rollback(ctx)
+internal/testhelpers/transaction.go:22:19 - tx.Rollback(ctx)
+internal/testhelpers/transaction.go:47:19 - tx.Rollback(ctx)
 ```
 
 **Fix**: Check and handle errors, or explicitly ignore with `_ = `

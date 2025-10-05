@@ -248,7 +248,7 @@ func TestServiceMethod(t *testing.T) {
 ### Test Helpers
 
 ```go
-// internal/testing/helpers.go
+// internal/testhelpers/helpers.go
 func NewTestService(t *testing.T) *Service {
     t.Helper()
     // Setup test service
