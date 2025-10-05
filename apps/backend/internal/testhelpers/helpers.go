@@ -1,4 +1,4 @@
-package testing
+package testhelpers
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 
 	"github.com/petonlabs/go-boilerplate/internal/lib/job"
 	"github.com/petonlabs/go-boilerplate/internal/server"
-	"github.com/petonlabs/go-boilerplate/internal/testing/mocks"
+	"github.com/petonlabs/go-boilerplate/internal/testhelpers/mocks"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )

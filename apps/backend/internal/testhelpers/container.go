@@ -1,4 +1,4 @@
-package testing
+package testhelpers
 
 import (
 	"context"
@@ -23,40 +23,97 @@ import (
 // and returns the value for the given key if present. It handles quoted
 // values with single or double quotes. Returns empty string if not found.
 func extractLibpqParam(dsn, key string) string {
-	// Simple scan: look for key= and read until whitespace.
-	lower := strings.ToLower(dsn)
-	search := strings.ToLower(key) + "="
-	idx := strings.Index(lower, search)
-	if idx == -1 {
-		return ""
-	}
-	// start of value in original dsn (preserve original case/quotes)
-	start := idx + len(search)
-	if start >= len(dsn) {
-		return ""
-	}
-	rest := dsn[start:]
-	// If value is quoted, extract until matching quote
-	if rest[0] == '\'' || rest[0] == '"' {
-		q := rest[0]
-		// find next unescaped quote
-		for i := 1; i < len(rest); i++ {
-			if rest[i] == q {
-				return strings.TrimSpace(rest[1:i])
+	// If the DSN looks like a URL, prefer parsing query params from it.
+	if strings.Contains(dsn, "://") {
+		if u, err := url.Parse(dsn); err == nil {
+			if v := u.Query().Get(key); v != "" {
+				return v
 			}
 		}
-		// no closing quote, return trimmed remainder
-		return strings.TrimSpace(rest[1:])
+		// fallthrough to libpq-style parsing if URL parse didn't yield the param
 	}
-	// unquoted: read until whitespace
-	end := len(rest)
-	for i := 0; i < len(rest); i++ {
-		if rest[i] == ' ' || rest[i] == '\t' || rest[i] == '\n' || rest[i] == '\r' {
-			end = i
+	// Token-scan the libpq-style DSN to ensure the key match is a true parameter
+	// boundary. Tokens are space-separated; values may be quoted with single or
+	// double quotes. This parser will iterate tokens and compare the key part
+	// case-insensitively.
+	i := 0
+	n := len(dsn)
+	wanted := strings.ToLower(key)
+
+	for i < n {
+		// Skip leading whitespace
+		for i < n && (dsn[i] == ' ' || dsn[i] == '\t' || dsn[i] == '\n' || dsn[i] == '\r') {
+			i++
+		}
+		if i >= n {
 			break
 		}
+
+		// Read key until '=' or whitespace
+		keyStart := i
+		for i < n && dsn[i] != '=' && dsn[i] != ' ' && dsn[i] != '\t' && dsn[i] != '\n' && dsn[i] != '\r' {
+			i++
+		}
+		if i >= n || dsn[i] != '=' {
+			// No '=', skip to next whitespace
+			for i < n && dsn[i] != ' ' && dsn[i] != '\t' && dsn[i] != '\n' && dsn[i] != '\r' {
+				i++
+			}
+			continue
+		}
+		keyStr := dsn[keyStart:i]
+		i++ // skip '='
+
+		// Parse value
+		if i >= n {
+			// key= at end with empty value
+			if strings.EqualFold(keyStr, wanted) {
+				return ""
+			}
+			break
+		}
+		var val string
+		if dsn[i] == '\'' || dsn[i] == '"' {
+			q := dsn[i]
+			i++
+			// Build unescaped value handling backslash-escapes
+			var sb strings.Builder
+			for i < n {
+				if dsn[i] == '\\' {
+					// Escape: consume backslash and append next char literally if present
+					i++
+					if i < n {
+						sb.WriteByte(dsn[i])
+						i++
+						continue
+					}
+					// trailing backslash, append as-is
+					sb.WriteByte('\\')
+					break
+				}
+				if dsn[i] == q {
+					i++
+					break
+				}
+				sb.WriteByte(dsn[i])
+				i++
+			}
+			val = sb.String()
+		} else {
+			// unquoted value: read until next whitespace
+			valStart := i
+			for i < n && dsn[i] != ' ' && dsn[i] != '\t' && dsn[i] != '\n' && dsn[i] != '\r' {
+				i++
+			}
+			val = dsn[valStart:i]
+		}
+
+		if strings.EqualFold(strings.TrimSpace(keyStr), wanted) {
+			return strings.TrimSpace(val)
+		}
+		// else continue scanning
 	}
-	return strings.TrimSpace(rest[:end])
+	return ""
 }
 
 type TestDB struct {

@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	svc "github.com/petonlabs/go-boilerplate/internal/service"
-	testhelpers "github.com/petonlabs/go-boilerplate/internal/testing"
+	testhelpers "github.com/petonlabs/go-boilerplate/internal/testhelpers"
 )
 
 func TestRequestPasswordReset_ProdDoesNotReturnToken(t *testing.T) {

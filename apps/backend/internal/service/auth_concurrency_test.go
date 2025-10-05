@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	testhelpers "github.com/petonlabs/go-boilerplate/internal/testing"
+	testhelpers "github.com/petonlabs/go-boilerplate/internal/testhelpers"
 )
 
 func TestRotateSecretsConcurrency(t *testing.T) {
@@ -33,7 +33,6 @@ func TestRotateSecretsConcurrency(t *testing.T) {
 				case <-stop:
 					return
 				default:
-					_ = svc // exercise ResetPassword digest path indirectly by calling GetTokenSecrets
 					_ = svc.GetTokenSecrets()
 					// small sleep to yield
 					time.Sleep(1 * time.Millisecond)
