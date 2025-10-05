@@ -14,7 +14,6 @@ type Middlewares struct {
 }
 
 func NewMiddlewares(s *server.Server) *Middlewares {
-	// Get New Relic application instance from server
 	var nrApp *newrelic.Application
 	if s.LoggerService != nil {
 		nrApp = s.LoggerService.GetApplication()

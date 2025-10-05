@@ -80,7 +80,6 @@ func (global *GlobalMiddlewares) RequestLogger() echo.MiddlewareFunc {
 				}
 			}
 
-			// Get enhanced logger from context
 			logger := GetLogger(c)
 
 			var e *zerolog.Event
@@ -94,12 +93,10 @@ func (global *GlobalMiddlewares) RequestLogger() echo.MiddlewareFunc {
 				e = logger.Info()
 			}
 
-			// Add request ID if available
 			if requestID := GetRequestID(c); requestID != "" {
 				e = e.Str("request_id", requestID)
 			}
 
-			// Add user context if available
 			if userID := GetUserID(c); userID != "" {
 				e = e.Str("user_id", userID)
 			}

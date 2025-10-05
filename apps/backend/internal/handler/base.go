@@ -110,7 +110,6 @@ func handleRequest[Req validation.Validatable](
 	path := c.Path()
 	route := path
 
-	// Get New Relic transaction from context
 	txn := newrelic.FromContext(c.Request().Context())
 	if txn != nil {
 		txn.AddAttribute("handler.name", route)
@@ -118,7 +117,6 @@ func handleRequest[Req validation.Validatable](
 		responseHandler.AddAttributes(txn, nil)
 	}
 
-	// Get context-enhanced logger
 	loggerBuilder := middleware.GetLogger(c).With().
 		Str("operation", responseHandler.GetOperation()).
 		Str("method", method).

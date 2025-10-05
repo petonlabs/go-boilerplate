@@ -112,7 +112,6 @@ func (h *HealthHandler) CheckHealth(c echo.Context) error {
 		}
 	}
 
-	// Set overall status
 	if !isHealthy {
 		response["status"] = "unhealthy"
 		logger.Warn().

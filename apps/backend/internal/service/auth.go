@@ -121,7 +121,6 @@ func (a *AuthService) RegisterUser(ctx context.Context, email, password string) 
 		return "", fmt.Errorf("database not initialized")
 	}
 
-	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
