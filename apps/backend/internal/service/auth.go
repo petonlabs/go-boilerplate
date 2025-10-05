@@ -230,7 +230,7 @@ func (a *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	// Only consider tokens for non-deleted users
 	err := a.server.DB.Pool.QueryRow(ctx, query, args...).Scan(&id, &exp)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return ErrInvalidPasswordResetToken
 		}
 		return err

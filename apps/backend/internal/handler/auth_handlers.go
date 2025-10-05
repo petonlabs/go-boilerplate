@@ -2,6 +2,7 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 	"time"
 
@@ -74,7 +75,7 @@ func (h *AuthHandler) RequestPasswordReset(c echo.Context) error {
 	token, err := h.services.Auth.RequestPasswordReset(c.Request().Context(), req.Email, time.Duration(h.server.Config.Auth.PasswordResetTTL)*time.Second)
 	if err != nil {
 		// If the email doesn't exist, treat as success to avoid user enumeration.
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			// Silent success: do not enqueue email and return 204
 			return c.NoContent(http.StatusNoContent)
 		}
