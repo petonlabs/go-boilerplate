@@ -1,4 +1,4 @@
-package testing
+package testhelpers
 
 import (
 	"context"
@@ -10,7 +10,10 @@ import (
 // TxFn represents a function that executes within a transaction
 type TxFn func(tx pgx.Tx) error
 
-// WithTransaction runs a function within a transaction and rolls it back afterward
+// WithTransaction begins a transaction, runs the provided function, commits the
+// transaction if the function returns nil, and rolls back the transaction if the
+// function returns an error. The error from the function (or from commit) is
+// returned to the caller.
 func WithTransaction(ctx context.Context, db *TestDB, fn TxFn) error {
 	// Begin transaction
 	tx, err := db.Pool.Begin(ctx)

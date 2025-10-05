@@ -8,6 +8,7 @@ import (
 
 	"github.com/petonlabs/go-boilerplate/internal/middleware"
 	"github.com/petonlabs/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/service"
 
 	"github.com/labstack/echo/v4"
 )
@@ -16,9 +17,9 @@ type HealthHandler struct {
 	Handler
 }
 
-func NewHealthHandler(s *server.Server) *HealthHandler {
+func NewHealthHandler(s *server.Server, services *service.Services) *HealthHandler {
 	return &HealthHandler{
-		Handler: NewHandler(s),
+		Handler: NewHandler(s, services),
 	}
 }
 
@@ -29,10 +30,18 @@ func (h *HealthHandler) CheckHealth(c echo.Context) error {
 		Logger()
 
 	response := map[string]interface{}{
-		"status":      "healthy",
-		"timestamp":   time.Now().UTC(),
-		"environment": h.server.Config.Primary.Env,
-		"checks":      make(map[string]interface{}),
+		"status":    "healthy",
+		"timestamp": time.Now().UTC(),
+		"environment": func() string {
+			if h.server == nil {
+				return ""
+			}
+			if cfg := h.server.GetConfig(); cfg != nil {
+				return cfg.Primary.Env
+			}
+			return ""
+		}(),
+		"checks": make(map[string]interface{}),
 	}
 
 	checks := response["checks"].(map[string]interface{})

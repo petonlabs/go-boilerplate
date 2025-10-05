@@ -55,6 +55,21 @@ type IntegrationConfig struct {
 
 type AuthConfig struct {
 	SecretKey string `koanf:"secret_key" validate:"required"`
+	// PasswordResetTTL is the default TTL (in seconds) for password reset tokens
+	PasswordResetTTL int `koanf:"password_reset_ttl"`
+	// DeletionDefaultTTL is the default TTL (in seconds) for scheduled deletions
+	DeletionDefaultTTL int `koanf:"deletion_default_ttl"`
+	// WebhookSigningSecret is the Svix/Clerk signing secret used to verify incoming webhooks
+	WebhookSigningSecret string `koanf:"webhook_signing_secret"`
+	// WebhookToleranceSec is the allowed clock skew in seconds for webhook timestamps
+	WebhookToleranceSec int `koanf:"webhook_tolerance_sec"`
+	// TokenHMACSecret is the secret used to HMAC password reset tokens before storing them.
+	// If empty, Auth.SecretKey will be used as a fallback.
+	TokenHMACSecret string `koanf:"token_hmac_secret"`
+	// AdminToken is a simple shared secret used to protect lightweight admin endpoints
+	// (used only for internal tooling/tests). For production, use a stronger auth
+	// mechanism or centralized secret management.
+	AdminToken string `koanf:"admin_token"`
 }
 
 func LoadConfig() (*Config, error) {

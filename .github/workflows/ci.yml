@@ -30,6 +30,7 @@ jobs:
           go-version: ${{ matrix.go }}
           cache-dependency-path: apps/backend/go.sum
 
+
       - name: Verify dependencies
         run: |
           go mod download
@@ -96,6 +97,10 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
           cache-dependency-path: apps/backend/go.sum
+
+      # Note: tool binaries (govulncheck/gosec) are installed each run to avoid
+      # stale cached versions. We intentionally avoid caching ~/go/bin when
+      # installing with @latest.
 
       - name: Run govulncheck
         run: |

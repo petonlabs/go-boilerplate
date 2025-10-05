@@ -1,4 +1,4 @@
-package testing
+package testhelpers
 
 import (
 	"time"
@@ -38,8 +38,9 @@ func CreateTestServer(logger *zerolog.Logger, db *TestDB) *server.Server {
 		DB: &database.Database{
 			Pool: db.Pool,
 		},
-		Config: db.Config,
 	}
+	// Store initial config atomically
+	testServer.SetConfig(db.Config)
 
 	return testServer
 }

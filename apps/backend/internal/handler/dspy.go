@@ -8,15 +8,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/petonlabs/go-boilerplate/internal/dspy"
 	"github.com/petonlabs/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/service"
 )
 
 type DspyHandler struct {
 	Handler
 }
 
-func NewDspyHandler(s *server.Server) *DspyHandler {
+func NewDspyHandler(s *server.Server, services *service.Services) *DspyHandler {
 	return &DspyHandler{
-		Handler: NewHandler(s),
+		Handler: NewHandler(s, services),
 	}
 }
 
