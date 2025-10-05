@@ -33,8 +33,26 @@ func (global *GlobalMiddlewares) CORS() echo.MiddlewareFunc {
 		panic("middleware.GlobalMiddlewares.CORS: server.GetConfig() returned nil; configuration must be set before initializing middlewares")
 	}
 
+	// Use server logger if available, otherwise a no-op logger
+	var logger zerolog.Logger
+	if global.server.Logger != nil {
+		logger = *global.server.Logger
+	} else {
+		logger = zerolog.Nop()
+	}
+
+	var allowOrigins []string
+	// cfg.Server is a struct (non-nil), but the CORSAllowedOrigins slice may be nil/empty.
+	if len(cfg.Server.CORSAllowedOrigins) == 0 {
+		// Explicitly fail-closed by providing an empty slice and warn so it's obvious
+		logger.Warn().Msg("CORS: no allowed origins configured; applying fail-closed policy (no origins allowed)")
+		allowOrigins = []string{}
+	} else {
+		allowOrigins = cfg.Server.CORSAllowedOrigins
+	}
+
 	return middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: cfg.Server.CORSAllowedOrigins,
+		AllowOrigins: allowOrigins,
 	})
 }
 
