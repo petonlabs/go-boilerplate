@@ -12,10 +12,8 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var emailClient *email.Client
-
 func (j *JobService) InitHandlers(config *config.Config, logger *zerolog.Logger) {
-	emailClient = email.NewClient(config, logger)
+	j.email = email.NewClient(config, logger)
 }
 
 func (j *JobService) handleUserDeleteTask(ctx context.Context, t *asynq.Task) error {
@@ -47,11 +45,21 @@ func (j *JobService) handleUserDeleteTask(ctx context.Context, t *asynq.Task) er
 		return nil
 	}
 
-	// Perform deletion: here we soft-delete by setting deleted_at to now and clearing sensitive fields
-	_, err = j.db.Pool.Exec(ctx, `UPDATE users SET deleted_at = now(), email = NULL, password_hash = NULL WHERE id::text = $1`, p.UserID)
+	// Perform deletion atomically: soft-delete only if still scheduled and time has arrived
+	result, err := j.db.Pool.Exec(ctx, `
+		UPDATE users
+		SET deleted_at = now(), email = NULL, password_hash = NULL
+		WHERE id::text = $1
+		  AND deletion_scheduled_at IS NOT NULL
+		  AND deletion_scheduled_at <= now()
+	`, p.UserID)
 	if err != nil {
 		j.logger.Error().Err(err).Str("user_id", p.UserID).Msg("failed to delete user")
 		return err
+	}
+	if result.RowsAffected() == 0 {
+		j.logger.Info().Str("user_id", p.UserID).Msg("deletion no longer scheduled or not yet time, skipping")
+		return nil
 	}
 
 	j.logger.Info().Str("user_id", p.UserID).Msg("User deletion completed")
@@ -69,7 +77,7 @@ func (j *JobService) handleWelcomeEmailTask(ctx context.Context, t *asynq.Task) 
 		Str("to", p.To).
 		Msg("Processing welcome email task")
 
-	err := emailClient.SendWelcomeEmail(
+	err := j.email.SendWelcomeEmail(
 		p.To,
 		p.FirstName,
 	)

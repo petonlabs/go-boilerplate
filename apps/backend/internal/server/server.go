@@ -52,7 +52,10 @@ func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.Lo
 	}
 
 	// job service (inject DB at construction so handlers have access)
-	jobService := job.NewJobService(logger, cfg, db)
+	jobService, err := job.NewJobService(logger, cfg, db)
+	if err != nil {
+		return nil, err
+	}
 	jobService.InitHandlers(cfg, logger)
 
 	// Start job server

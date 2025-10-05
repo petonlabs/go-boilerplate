@@ -2,10 +2,19 @@ package service
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
+	"unicode"
+
+	"github.com/rs/zerolog"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -17,37 +26,69 @@ import (
 
 type AuthService struct {
 	server *server.Server
+	// tokenSecrets holds the active and rotated HMAC secrets.
+	// Access must be done under secretsMu.
+	secretsMu    sync.RWMutex
+	tokenSecrets []string
 }
 
+// ErrInvalidCredentials is returned when login fails due to invalid email/password
+var ErrInvalidCredentials = errors.New("invalid credentials")
+var (
+	ErrInvalidPasswordResetToken = errors.New("invalid password reset token")
+	ErrExpiredPasswordResetToken = errors.New("password reset token expired")
+	ErrUserNotFound              = errors.New("user not found or already deleted")
+	ErrPasswordValidation        = errors.New("password validation failed")
+)
+
 func NewAuthService(s *server.Server) *AuthService {
-	clerk.SetKey(s.Config.Auth.SecretKey)
-	return &AuthService{
-		server: s,
+	a := &AuthService{server: s}
+	if s != nil && s.Config != nil {
+		clerk.SetKey(s.Config.Auth.SecretKey)
 	}
+	// Initialize token secrets from config so reads can use the in-memory slice.
+	if s != nil && s.Config != nil {
+		initial := parseTokenSecrets(s.Config.Auth.TokenHMACSecret, s.Config.Auth.SecretKey)
+		if len(initial) == 0 {
+			// keep empty slice to avoid nil deref on reads
+			initial = []string{}
+		}
+		a.secretsMu.Lock()
+		a.tokenSecrets = initial
+		a.secretsMu.Unlock()
+	} else {
+		a.secretsMu.Lock()
+		a.tokenSecrets = []string{}
+		a.secretsMu.Unlock()
+	}
+	return a
 }
 
 // SyncUser upserts a user record from Clerk webhook data
-func (a *AuthService) SyncUser(ctx context.Context, clerkID, externalID, firstName, lastName, imageURL string, rawPayload []byte) error {
+// email parameter should be provided from the webhook payload when available.
+func (a *AuthService) SyncUser(ctx context.Context, clerkID, externalID, email, firstName, lastName, imageURL string, rawPayload []byte) error {
 	if a.server == nil || a.server.DB == nil || a.server.DB.Pool == nil {
 		return fmt.Errorf("database not initialized")
 	}
 
-	// Upsert by external_id if provided, otherwise clerk_id
-	query := `INSERT INTO users (email, clerk_id, external_id, first_name, last_name, image_url, raw_payload, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, now())
-ON CONFLICT (external_id) DO UPDATE SET
-  clerk_id = EXCLUDED.clerk_id,
-  first_name = EXCLUDED.first_name,
-  last_name = EXCLUDED.last_name,
-  image_url = EXCLUDED.image_url,
-  raw_payload = EXCLUDED.raw_payload;
-`
-
-	// email is optional in webhook payload; use external_id as fallback
-	email := ""
+	// If both identifiers are missing, nothing to do.
 	if externalID == "" && clerkID == "" {
 		return nil
 	}
+
+	// Use a composite unique index on (COALESCE(external_id,''), COALESCE(clerk_id,''))
+	// created by migration 004_users_external_clerk_unique.sql. We can upsert
+	// against that index by referencing its name as a CONSTRAINT with
+	// ON CONFLICT ON CONSTRAINT <index_name> DO UPDATE ...
+	query := `INSERT INTO users (email, clerk_id, external_id, first_name, last_name, image_url, raw_payload, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, now())
+ON CONFLICT ON CONSTRAINT users_external_clerk_unique_idx DO UPDATE SET
+	clerk_id = EXCLUDED.clerk_id,
+	external_id = EXCLUDED.external_id,
+	first_name = EXCLUDED.first_name,
+	last_name = EXCLUDED.last_name,
+	image_url = EXCLUDED.image_url,
+	raw_payload = EXCLUDED.raw_payload;`
 
 	_, err := a.server.DB.Pool.Exec(ctx, query, email, clerkID, externalID, firstName, lastName, imageURL, rawPayload)
 	return err
@@ -84,15 +125,25 @@ func (a *AuthService) Login(ctx context.Context, email, password string) (string
 	var hash string
 	err := a.server.DB.Pool.QueryRow(ctx, `SELECT id::text, password_hash FROM users WHERE email=$1 AND deleted_at IS NULL`, email).Scan(&id, &hash)
 	if err != nil {
-		return "", err
+		// avoid revealing whether the user exists
+		return "", ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)); err != nil {
-		return "", fmt.Errorf("invalid credentials")
+		return "", ErrInvalidCredentials
 	}
 
 	// update last_login_at
-	_, _ = a.server.DB.Pool.Exec(ctx, `UPDATE users SET last_login_at = now() WHERE id = $1`, id)
+	if _, err := a.server.DB.Pool.Exec(ctx, `UPDATE users SET last_login_at = now() WHERE id = $1`, id); err != nil {
+		// Log the error but don't fail login to avoid impacting UX
+		if a.server != nil && a.server.Logger != nil {
+			a.server.Logger.Error().Err(err).Str("user_id", id).Msg("failed to update last_login_at")
+		} else {
+			// Fallback: create a temporary logger and log structured message
+			tmp := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
+			tmp.Error().Err(err).Str("user_id", id).Msg("failed to update last_login_at")
+		}
+	}
 	return id, nil
 }
 
@@ -104,31 +155,111 @@ func (a *AuthService) RequestPasswordReset(ctx context.Context, email string, tt
 	}
 	token := hex.EncodeToString(tokenBytes)
 	expiry := time.Now().Add(ttl)
+	if a.server == nil || a.server.DB == nil || a.server.DB.Pool == nil {
+		return "", fmt.Errorf("database not initialized")
+	}
 
-	_, err := a.server.DB.Pool.Exec(ctx, `UPDATE users SET password_reset_token=$1, password_reset_expires=$2 WHERE email=$3`, token, expiry, email)
+	// Compute HMAC-SHA256 of the token using the current configured secret to avoid storing raw tokens.
+	// Load the current secrets under a read lock; fall back to config parsing if not initialized.
+	var currentSecret string
+	a.secretsMu.RLock()
+	if len(a.tokenSecrets) > 0 {
+		currentSecret = a.tokenSecrets[0]
+	}
+	a.secretsMu.RUnlock()
+	if currentSecret == "" {
+		// fallback: parse from config (should be rare)
+		parsed := parseTokenSecrets(a.server.Config.Auth.TokenHMACSecret, a.server.Config.Auth.SecretKey)
+		if len(parsed) == 0 {
+			return "", fmt.Errorf("no token HMAC secret configured")
+		}
+		currentSecret = parsed[0]
+	}
+	mac := hmac.New(sha256.New, []byte(currentSecret))
+	mac.Write([]byte(token))
+	hashedToken := hex.EncodeToString(mac.Sum(nil))
+
+	ct, err := a.server.DB.Pool.Exec(ctx, `UPDATE users SET password_reset_token=$1, password_reset_expires=$2 WHERE email=$3`, hashedToken, expiry, email)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to set password reset token for email %s: %w", email, err)
+	}
+	if ct.RowsAffected() == 0 {
+		// No rows updated means no user with that email (or user deleted)
+		return "", sql.ErrNoRows
 	}
 	return token, nil
 }
 
 // ResetPassword verifies token and updates password
 func (a *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {
+	// Ensure DB is initialized
+	if a.server == nil || a.server.DB == nil || a.server.DB.Pool == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// Validate token is non-empty
+	if token == "" {
+		return ErrInvalidPasswordResetToken
+	}
+
 	var id string
-	var exp time.Time
-	err := a.server.DB.Pool.QueryRow(ctx, `SELECT id::text, password_reset_expires FROM users WHERE password_reset_token=$1`, token).Scan(&id, &exp)
+	var exp sql.NullTime
+	// Compute HMAC-SHA256 digests for the provided token using all configured secrets (supports rotation).
+	a.secretsMu.RLock()
+	localSecrets := make([]string, len(a.tokenSecrets))
+	copy(localSecrets, a.tokenSecrets)
+	a.secretsMu.RUnlock()
+	digests := computeTokenDigests(token, localSecrets)
+	// If no secrets were loaded from the in-memory store (unlikely), fallback to parsing from config.
+	if len(digests) == 0 {
+		secrets := parseTokenSecrets(a.server.Config.Auth.TokenHMACSecret, a.server.Config.Auth.SecretKey)
+		if len(secrets) == 0 {
+			return ErrInvalidPasswordResetToken
+		}
+		digests = computeTokenDigests(token, secrets)
+	}
+
+	// Build a parameterized IN clause to find the user by any of the digests
+	placeholders := make([]string, len(digests))
+	args := make([]interface{}, len(digests))
+	for i, d := range digests {
+		placeholders[i] = "$" + fmt.Sprint(i+1)
+		args[i] = d
+	}
+	query := `SELECT id::text, password_reset_expires FROM users WHERE password_reset_token IN (` + strings.Join(placeholders, ",") + `) AND deleted_at IS NULL`
+	// Only consider tokens for non-deleted users
+	err := a.server.DB.Pool.QueryRow(ctx, query, args...).Scan(&id, &exp)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrInvalidPasswordResetToken
+		}
 		return err
 	}
-	if time.Now().After(exp) {
-		return fmt.Errorf("token expired")
+	if !exp.Valid {
+		return ErrInvalidPasswordResetToken
 	}
+	if time.Now().After(exp.Time) {
+		return ErrExpiredPasswordResetToken
+	}
+
+	// Validate password with shared helper (min/max length and character classes)
+	if err := validatePassword(newPassword); err != nil {
+		return err
+	}
+
 	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
-	_, err = a.server.DB.Pool.Exec(ctx, `UPDATE users SET password_hash=$1, password_reset_token=NULL, password_reset_expires=NULL WHERE id=$2`, string(hashed), id)
-	return err
+	// Ensure we only update non-deleted users and return an error if nothing updated
+	ct, err := a.server.DB.Pool.Exec(ctx, `UPDATE users SET password_hash=$1, password_reset_token=NULL, password_reset_expires=NULL WHERE id=$2 AND deleted_at IS NULL`, string(hashed), id)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return ErrUserNotFound
+	}
+	return nil
 }
 
 // ScheduleDeletion marks a user for deletion at now + ttl and enqueues a deletion job
@@ -146,4 +277,136 @@ func (a *AuthService) ScheduleDeletion(ctx context.Context, userID string, ttl t
 		}
 	}
 	return nil
+}
+
+// CancelDeletion clears deletion_scheduled_at for a user, interrupting a scheduled deletion
+func (a *AuthService) CancelDeletion(ctx context.Context, userID string) error {
+	if a.server == nil || a.server.DB == nil || a.server.DB.Pool == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	_, err := a.server.DB.Pool.Exec(ctx, `UPDATE users SET deletion_scheduled_at = NULL WHERE id::text = $1`, userID)
+	return err
+}
+
+// validatePassword enforces min/max length and character class requirements.
+func validatePassword(pw string) error {
+	if len(pw) < 8 {
+		return fmt.Errorf("password must be at least 8 characters")
+	}
+	if len(pw) > 128 {
+		return fmt.Errorf("password must not exceed 128 characters")
+	}
+	var hasUpper, hasLower, hasDigit bool
+	for _, r := range pw {
+		if unicode.IsUpper(r) {
+			hasUpper = true
+		}
+		if unicode.IsLower(r) {
+			hasLower = true
+		}
+		if unicode.IsDigit(r) {
+			hasDigit = true
+		}
+	}
+	if !hasUpper || !hasLower || !hasDigit {
+		return fmt.Errorf("password must include upper and lower case letters and a digit")
+	}
+	return nil
+}
+
+// computeTokenDigests computes HMAC-SHA256 hex-encoded digests for the provided token
+// using the provided secrets slice. Returns an empty slice if secrets is empty.
+func computeTokenDigests(token string, secrets []string) []string {
+	if len(secrets) == 0 {
+		return []string{}
+	}
+	digests := make([]string, 0, len(secrets))
+	for _, s := range secrets {
+		mac := hmac.New(sha256.New, []byte(s))
+		mac.Write([]byte(token))
+		digests = append(digests, hex.EncodeToString(mac.Sum(nil)))
+	}
+	return digests
+}
+
+// parseTokenSecrets returns a slice of secrets to try for HMAC. Accepts an explicit
+// tokenHMACSecret string which may include multiple secrets separated by ',' or '|'.
+// If tokenHMACSecret is empty, fall back to the mainSecret as the single value.
+func parseTokenSecrets(tokenHMACSecret, mainSecret string) []string {
+	// If no explicit tokenHMACSecret is provided, fall back to mainSecret only if it is non-empty.
+	if strings.TrimSpace(tokenHMACSecret) == "" {
+		if strings.TrimSpace(mainSecret) == "" {
+			return nil
+		}
+		return []string{mainSecret}
+	}
+	// Normalize separators
+	normalized := strings.ReplaceAll(tokenHMACSecret, "|", ",")
+	parts := strings.Split(normalized, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		out = append(out, p)
+	}
+	// If after filtering there are no non-empty parts, don't silently fall back to mainSecret;
+	// return nil to indicate configuration is effectively empty.
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// RotateTokenHMACSecrets atomically replaces the configured token HMAC secrets.
+// Accepts a comma or pipe separated list where the first value is the active
+// secret used for newly created tokens. This is a lightweight in-memory helper
+// intended for admin tooling or tests. In production you should persist and
+// distribute secrets securely (vault, env, k8s secret, etc.).
+func (a *AuthService) RotateTokenHMACSecrets(newSecrets string) error {
+	if a == nil || a.server == nil || a.server.Config == nil {
+		return fmt.Errorf("server or config not available")
+	}
+	// sanitize input by trimming spaces
+	normalized := strings.TrimSpace(newSecrets)
+	if normalized == "" {
+		return fmt.Errorf("newSecrets must not be empty")
+	}
+	// Parse the new secrets without falling back to mainSecret.
+	parsed := parseTokenSecrets(normalized, "")
+	if len(parsed) == 0 {
+		return fmt.Errorf("parsed secrets are empty or invalid")
+	}
+	// Atomically replace the in-memory secrets under write lock.
+	a.secretsMu.Lock()
+	a.tokenSecrets = parsed
+	a.secretsMu.Unlock()
+
+	// Do not write secrets back to server config here to avoid data races. The in-memory
+	// tokenSecrets slice is the runtime source of truth and is protected by secretsMu.
+	if a.server.Logger != nil {
+		// Build a non-sensitive summary: count and masked preview (only last 4 chars visible)
+		masked := make([]string, 0, len(parsed))
+		for _, s := range parsed {
+			if len(s) <= 4 {
+				masked = append(masked, "****")
+			} else {
+				tail := s[len(s)-4:]
+				masked = append(masked, "****"+tail)
+			}
+		}
+		a.server.Logger.Info().Int("secrets_count", len(parsed)).Strs("secrets_preview_masked", masked).Msg("rotated token HMAC secrets (preview)")
+	}
+	return nil
+}
+
+// GetTokenSecrets returns a copy of the currently configured token HMAC secrets.
+// The returned slice is a shallow copy to avoid exposing internal state for modification.
+func (a *AuthService) GetTokenSecrets() []string {
+	a.secretsMu.RLock()
+	defer a.secretsMu.RUnlock()
+	out := make([]string, len(a.tokenSecrets))
+	copy(out, a.tokenSecrets)
+	return out
 }

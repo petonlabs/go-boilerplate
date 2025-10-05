@@ -1,20 +1,39 @@
 package job
 
 import (
+	"errors"
+
 	"github.com/hibiken/asynq"
 	"github.com/petonlabs/go-boilerplate/internal/config"
 	"github.com/petonlabs/go-boilerplate/internal/database"
+	"github.com/petonlabs/go-boilerplate/internal/lib/email"
 	"github.com/rs/zerolog"
 )
 
 type JobService struct {
-	Client *asynq.Client
+	// Client is an abstraction over asynq.Client so tests can inject a mock.
+	Client Enqueuer
 	server *asynq.Server
 	logger *zerolog.Logger
 	db     *database.Database
+	// email client will be initialized by InitHandlers
+	email *email.Client
 }
 
-func NewJobService(logger *zerolog.Logger, cfg *config.Config, db *database.Database) *JobService {
+// Enqueuer abstracts the subset of asynq.Client used by our app so tests
+// can inject a mock implementation.
+type Enqueuer interface {
+	Enqueue(*asynq.Task, ...asynq.Option) (*asynq.TaskInfo, error)
+	Close() error
+}
+
+func NewJobService(logger *zerolog.Logger, cfg *config.Config, db *database.Database) (*JobService, error) {
+	if db == nil {
+		return nil, errors.New("database is required for JobService")
+	}
+	if cfg == nil || cfg.Redis.Address == "" {
+		return nil, errors.New("redis address required in config for JobService")
+	}
 	redisAddr := cfg.Redis.Address
 
 	client := asynq.NewClient(asynq.RedisClientOpt{
@@ -38,7 +57,7 @@ func NewJobService(logger *zerolog.Logger, cfg *config.Config, db *database.Data
 		server: server,
 		logger: logger,
 		db:     db,
-	}
+	}, nil
 }
 
 func (j *JobService) Start() error {
@@ -57,8 +76,13 @@ func (j *JobService) Start() error {
 
 func (j *JobService) Stop() {
 	j.logger.Info().Msg("Stopping background job server")
-	j.server.Shutdown()
-	if err := j.Client.Close(); err != nil {
-		j.logger.Warn().Err(err).Msg("Error closing job client")
+	// server may be nil in tests where we only inject a client mock
+	if j.server != nil {
+		j.server.Shutdown()
+	}
+	if j.Client != nil {
+		if err := j.Client.Close(); err != nil {
+			j.logger.Warn().Err(err).Msg("Error closing job client")
+		}
 	}
 }

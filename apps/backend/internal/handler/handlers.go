@@ -11,6 +11,7 @@ type Handlers struct {
 	Dspy    *DspyHandler
 	Webhook *WebhookHandler
 	Auth    *AuthHandler
+	Admin   *AdminHandler
 }
 
 func NewHandlers(s *server.Server, services *service.Services) *Handlers {
@@ -20,5 +21,6 @@ func NewHandlers(s *server.Server, services *service.Services) *Handlers {
 		Dspy:    NewDspyHandler(s, services),
 		Webhook: NewWebhookHandler(s, services),
 		Auth:    NewAuthHandler(s, services),
+		Admin:   NewAdminHandler(s, services),
 	}
 }

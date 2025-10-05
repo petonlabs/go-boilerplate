@@ -423,10 +423,13 @@ log.Error().Msg("error occurred")       // Errors
 
 ```go
 // Quick debugging (remove before commit)
-fmt.Printf("DEBUG: userID=%s, status=%v\n", userID, status)
+// Prefer structured logging even for temporary debug statements. If a full
+// logger isn't available, create a temporary zerolog console logger.
+tmp := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
+tmp.Debug().Str("user_id", userID).Interface("status", status).Msg("DEBUG")
 
-// Better: Use logger
-log.Printf("DEBUG: userID=%s, status=%v", userID, status)
+// Better: Use application logger
+appLog.Debug().Str("user_id", userID).Interface("status", status).Msg("DEBUG")
 ```
 
 ### CI/CD Debugging

@@ -1,12 +1,12 @@
--- Write your migrate up statements here
-CREATE TABLE IF NOT EXISTS users (
-	id SERIAL PRIMARY KEY,
-	email TEXT NOT NULL UNIQUE,
-	created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+-- Initial schema setup
+CREATE TABLE IF NOT EXISTS schema_version (
+  version INT PRIMARY KEY,
+  applied_at TIMESTAMPTZ DEFAULT now(),
+  dirty BOOLEAN DEFAULT FALSE
 );
 
----- create above / drop below ----
-
--- Write your migrate down statements here. If this migration is irreversible
--- Then delete the separator line above.
-DROP TABLE IF EXISTS users;
+-- Create users table as a baseline
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMPTZ DEFAULT now()
+);

@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/petonlabs/go-boilerplate/internal/lib/job"
 	"github.com/petonlabs/go-boilerplate/internal/server"
+	"github.com/petonlabs/go-boilerplate/internal/testing/mocks"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
 )
@@ -21,6 +23,9 @@ func SetupTest(t *testing.T) (*TestDB, *server.Server, func()) {
 
 	testServer := CreateTestServer(&logger, testDB)
 
+	// by default tests don't have a JobService; allow attaching a mock enqueuer
+	// later via AttachMockEnqueuer
+
 	cleanup := func() {
 		if testDB.Pool != nil {
 			testDB.Pool.Close()
@@ -30,6 +35,17 @@ func SetupTest(t *testing.T) (*TestDB, *server.Server, func()) {
 	}
 
 	return testDB, testServer, cleanup
+}
+
+// AttachMockEnqueuer attaches a MockEnqueuer to the provided server and
+// returns the mock so tests can assert enqueued tasks.
+func AttachMockEnqueuer(s *server.Server, m *mocks.MockEnqueuer) {
+	if s == nil || m == nil {
+		return
+	}
+	// Create a minimal JobService with the mock as its Client so handlers
+	// that check s.Job.Client can call Enqueue without touching Redis.
+	s.Job = &job.JobService{Client: m}
 }
 
 // MustMarshalJSON marshals an object to JSON or fails the test

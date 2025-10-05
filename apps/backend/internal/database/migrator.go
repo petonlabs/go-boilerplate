@@ -58,6 +58,13 @@ func Migrate(ctx context.Context, logger *zerolog.Logger, cfg *config.Config) er
 	if err := m.Migrate(ctx); err != nil {
 		return err
 	}
+
+	// Ensure applied_at is populated for audit purposes for any rows created by the migrator.
+	// If this update fails we log a warning but continue the migration process because
+	// applied_at is optional and should not block schema changes.
+	if _, err := conn.Exec(ctx, `UPDATE schema_version SET applied_at = now() WHERE applied_at IS NULL`); err != nil {
+		logger.Warn().Err(err).Msg("failed to populate applied_at on schema_version; continuing")
+	}
 	// Check for potential overflow before conversion. int(^int32(0)) is -1
 	// so the previous check always triggered. Use a proper MaxInt32 value.
 	migrationCount := len(m.Migrations)
