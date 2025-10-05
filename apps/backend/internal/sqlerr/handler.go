@@ -104,7 +104,6 @@ func getEntityName(tableName, columnName string) string {
 
 	// Second priority: table name (fallback option)
 	if tableName != "" {
-		// Use singular form
 		entity := tableName
 		if strings.HasSuffix(entity, "s") && len(entity) > 1 {
 			entity = entity[:len(entity)-1]
@@ -112,7 +111,6 @@ func getEntityName(tableName, columnName string) string {
 		return humanizeText(entity)
 	}
 
-	// Default fallback
 	return "record"
 }
 

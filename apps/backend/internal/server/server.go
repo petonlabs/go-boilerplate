@@ -85,7 +85,6 @@ func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.Lo
 	}
 	jobService.InitHandlers(cfg, logger)
 
-	// Start job server
 	if err := jobService.Start(); err != nil {
 		return nil, err
 	}
@@ -100,7 +99,6 @@ func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.Lo
 	// Store initial config atomically
 	server.SetConfig(cfg)
 
-	// Start metrics collection
 	// Runtime metrics are automatically collected by New Relic Go agent
 
 	return server, nil
@@ -189,7 +187,6 @@ func (s *Server) SetTokenHMACSecret(newSecret string) {
 	for {
 		oldPtr := s.configPtr.Load()
 		if oldPtr == nil {
-			// Nothing to update
 			return
 		}
 

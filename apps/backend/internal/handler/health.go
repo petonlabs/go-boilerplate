@@ -47,7 +47,6 @@ func (h *HealthHandler) CheckHealth(c echo.Context) error {
 	checks := response["checks"].(map[string]interface{})
 	isHealthy := true
 
-	// Check database connectivity
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 

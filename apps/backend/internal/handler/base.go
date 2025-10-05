@@ -136,7 +136,6 @@ func handleRequest[Req validation.Validatable](
 
 	logger.Info().Msg("handling request")
 
-	// Validation with observability
 	validationStart := time.Now()
 	if err := validation.BindAndValidate(c, req); err != nil {
 		validationDuration := time.Since(validationStart)

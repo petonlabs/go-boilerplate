@@ -41,7 +41,6 @@ func extractLibpqParam(dsn, key string) string {
 	wanted := strings.ToLower(key)
 
 	for i < n {
-		// Skip leading whitespace
 		for i < n && (dsn[i] == ' ' || dsn[i] == '\t' || dsn[i] == '\n' || dsn[i] == '\r') {
 			i++
 		}
@@ -64,7 +63,6 @@ func extractLibpqParam(dsn, key string) string {
 		keyStr := dsn[keyStart:i]
 		i++ // skip '='
 
-		// Parse value
 		if i >= n {
 			// key= at end with empty value
 			if strings.EqualFold(keyStr, wanted) {
@@ -249,7 +247,6 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 		}
 	})
 
-	// Create configuration
 	// Determine sslmode for container-created DB: prefer TEST_DATABASE_SSL_MODE env or default to disable
 	sslMode := os.Getenv("TEST_DATABASE_SSL_MODE")
 	if sslMode == "" {
@@ -295,7 +292,6 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 	db, lastErr = connectWithRetry(cfg, &logger, 5, nil)
 	require.NoError(t, lastErr, "failed to connect to database after multiple attempts")
 
-	// Apply migrations
 	err = database.Migrate(ctx, &logger, cfg)
 	require.NoError(t, err, "failed to apply database migrations")
 

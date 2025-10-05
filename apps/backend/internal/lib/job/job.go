@@ -61,7 +61,6 @@ func NewJobService(logger *zerolog.Logger, cfg *config.Config, db *database.Data
 }
 
 func (j *JobService) Start() error {
-	// Register task handlers
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(TaskWelcome, j.handleWelcomeEmailTask)
 	mux.HandleFunc(TaskUserDelete, j.handleUserDeleteTask)

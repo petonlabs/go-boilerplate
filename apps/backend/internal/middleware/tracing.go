@@ -55,14 +55,12 @@ func (tm *TracingMiddleware) EnhanceTracing() echo.MiddlewareFunc {
 				}
 			}
 
-			// Execute next handler
 			err := next(c)
 			// Record error if any with enhanced stack traces
 			if err != nil {
 				txn.NoticeError(nrpkgerrors.Wrap(err))
 			}
 
-			// Add response status
 			txn.AddAttribute("http.status_code", c.Response().Status)
 
 			return err

@@ -372,7 +372,6 @@ func parseTokenSecrets(tokenHMACSecret, mainSecret string) []string {
 		}
 		return []string{mainSecret}
 	}
-	// Normalize separators
 	normalized := strings.ReplaceAll(tokenHMACSecret, "|", ",")
 	parts := strings.Split(normalized, ",")
 	out := make([]string, 0, len(parts))
