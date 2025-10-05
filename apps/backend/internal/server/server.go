@@ -83,12 +83,27 @@ func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.Lo
 }
 
 func (s *Server) SetupHTTPServer(handler http.Handler) {
+	cfg := s.getConfig()
+	if cfg == nil {
+		// Fallback: if no config is available, initialize with conservative timeouts
+		// to avoid Slowloris attack vectors (gosec G112).
+		s.httpServer = &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 5 * time.Second,
+			ReadTimeout:       5 * time.Second,
+			WriteTimeout:      10 * time.Second,
+			IdleTimeout:       60 * time.Second,
+		}
+		return
+	}
+
 	s.httpServer = &http.Server{
-		Addr:         ":" + s.Config.Server.Port,
-		Handler:      handler,
-		ReadTimeout:  time.Duration(s.Config.Server.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(s.Config.Server.WriteTimeout) * time.Second,
-		IdleTimeout:  time.Duration(s.Config.Server.IdleTimeout) * time.Second,
+		Addr:              ":" + cfg.Server.Port,
+		Handler:           handler,
+		ReadHeaderTimeout: time.Duration(cfg.Server.ReadTimeout) * time.Second,
+		ReadTimeout:       time.Duration(cfg.Server.ReadTimeout) * time.Second,
+		WriteTimeout:      time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		IdleTimeout:       time.Duration(cfg.Server.IdleTimeout) * time.Second,
 	}
 }
 
@@ -97,9 +112,18 @@ func (s *Server) Start() error {
 		return errors.New("HTTP server not initialized")
 	}
 
+	cfg := s.getConfig()
+	// Use empty strings if cfg is nil
+	port := ""
+	env := ""
+	if cfg != nil {
+		port = cfg.Server.Port
+		env = cfg.Primary.Env
+	}
+
 	s.Logger.Info().
-		Str("port", s.Config.Server.Port).
-		Str("env", s.Config.Primary.Env).
+		Str("port", port).
+		Str("env", env).
 		Msg("starting server")
 
 	return s.httpServer.ListenAndServe()
@@ -142,4 +166,36 @@ func (s *Server) SetTokenHMACSecret(newSecret string) {
 		return
 	}
 	s.Config.Auth.TokenHMACSecret = newSecret
+}
+
+// getConfig returns a snapshot copy of the current server config under a
+// read lock. The returned value is safe for callers to read without holding
+// the server's internal lock. Note this performs a shallow copy of the
+// top-level config and nested structs; slices and pointer fields are copied
+// where necessary to avoid shared mutable references for common cases.
+func (s *Server) getConfig() *config.Config {
+	s.configMu.RLock()
+	defer s.configMu.RUnlock()
+	if s.Config == nil {
+		return nil
+	}
+
+	// Shallow copy top-level struct
+	cfg := *s.Config
+
+	// Copy slice fields to avoid shared backing arrays
+	if cfg.Server.CORSAllowedOrigins != nil {
+		copied := make([]string, len(cfg.Server.CORSAllowedOrigins))
+		copy(copied, cfg.Server.CORSAllowedOrigins)
+		cfg.Server.CORSAllowedOrigins = copied
+	}
+
+	// Deep copy Observability pointer if present
+	if s.Config.Observability != nil {
+		obs := *s.Config.Observability
+		// If Observability contains slices/pointers, copy them here as needed
+		cfg.Observability = &obs
+	}
+
+	return &cfg
 }
