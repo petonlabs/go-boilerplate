@@ -1,261 +1,194 @@
-# 📚 Documentation
+# Documentation
 
-Welcome to the go-boilerplate documentation! This folder contains comprehensive guides, best practices, and reference materials for the project.
-
----
-
-## 📖 Documentation Index
-
-### Core Documentation
-
-| Document | Description | Status |
-|----------|-------------|--------|
-| [**BEST_PRACTICES.md**](./BEST_PRACTICES.md) | Complete development workflow, debugging, and best practices guide | ✅ Current |
-| [**CI_IMPROVEMENTS.md**](./CI_IMPROVEMENTS.md) | CI/CD pipeline setup, improvements, and troubleshooting | ✅ Current |
-| [**MODULE_CONFIGURATION.md**](./MODULE_CONFIGURATION.md) | Detailed dependency documentation and verification | ✅ Current |
-| [**DEPENDENCY_AUDIT.md**](./DEPENDENCY_AUDIT.md) | Dependency audit and verification results | ✅ Current |
-| [**LINTING_ISSUES.md**](./LINTING_ISSUES.md) | Historical linting issues and fixes | ✅ Resolved |
+Welcome to the go-boilerplate documentation! This documentation is organized using **MECE (Mutually Exclusive, Collectively Exhaustive)** principles for easy navigation.
 
 ---
 
-## 🎯 Quick Start Guides
+## 📂 Documentation Structure
+
+### 🚀 [Getting Started](./getting-started/)
+
+**For**: New developers, onboarding
+
+Everything you need to get up and running:
+- [Quick Start](./getting-started/QUICK_START.md) - Get running in 5 minutes
+- [Local Development](./getting-started/LOCAL_DEVELOPMENT.md) - Development workflow
+- [Accessing Services](./getting-started/ACCESSING_SERVICES.md) - Connect to DB, Redis, API
+
+### 💻 [Development](./development/)
+
+**For**: Daily development, code quality
+
+Guides for writing and testing code:
+- [Best Practices](./development/BEST_PRACTICES.md) - Coding standards and debugging
+- [Testing Guide](./development/TESTING.md) - Unit, integration, and E2E testing
+
+### 🚢 [Operations](./operations/)
+
+**For**: DevOps, deployment, CI/CD
+
+Deployment and operational guides:
+- [Production Deployment](./operations/PRODUCTION.md) - Deploy to production
+- [CI/CD Pipeline](./operations/CI_CD.md) - Continuous integration and delivery
+
+### 📚 [Reference](./reference/)
+
+**For**: Looking up specifics, architecture details
+
+Technical references and specifications:
+- [Architecture](./reference/ARCHITECTURE.md) - System design and patterns
+- [Configuration](./reference/CONFIGURATION.md) - Environment variables reference
+- [Dependencies](./reference/DEPENDENCIES.md) - Package documentation
+- [Authentication](./reference/AUTHENTICATION.md) - Auth implementation details
+
+---
+
+## 🎯 Quick Navigation
+
+### I want to...
+
+| Goal | Document |
+|------|----------|
+| Start developing quickly | [Quick Start](./getting-started/QUICK_START.md) |
+| Set up my local environment | [Local Development](./getting-started/LOCAL_DEVELOPMENT.md) |
+| Understand the codebase | [Architecture](./reference/ARCHITECTURE.md) |
+| Write quality code | [Best Practices](./development/BEST_PRACTICES.md) |
+| Run tests | [Testing Guide](./development/TESTING.md) |
+| Deploy to production | [Production Deployment](./operations/PRODUCTION.md) |
+| Fix CI failures | [CI/CD Guide](./operations/CI_CD.md) |
+| Configure environment variables | [Configuration Reference](./reference/CONFIGURATION.md) |
+| Access database/Redis | [Accessing Services](./getting-started/ACCESSING_SERVICES.md) |
+| Understand dependencies | [Dependencies Guide](./reference/DEPENDENCIES.md) |
+
+---
+
+## 🎓 Learning Paths
 
 ### For New Developers
 
-1. **Start here:** [BEST_PRACTICES.md](./BEST_PRACTICES.md)
-   - Development workflow
-   - Code quality standards
-   - Testing practices
-   - Debugging techniques
+1. ✅ [Quick Start](./getting-started/QUICK_START.md) - Get the app running
+2. ✅ [Architecture](./reference/ARCHITECTURE.md) - Understand the structure
+3. ✅ [Local Development](./getting-started/LOCAL_DEVELOPMENT.md) - Development workflow
+4. ✅ [Best Practices](./development/BEST_PRACTICES.md) - Coding standards
+5. ✅ [Testing Guide](./development/TESTING.md) - Write tests
 
-2. **Understand CI/CD:** [CI_IMPROVEMENTS.md](./CI_IMPROVEMENTS.md)
-   - How our CI pipeline works
-   - How to debug CI failures
-   - Performance optimizations
+### For DevOps Engineers
 
-3. **Learn about dependencies:** [MODULE_CONFIGURATION.md](./MODULE_CONFIGURATION.md)
-   - What libraries we use
-   - Why we chose them
-   - How they're configured
-
-### For DevOps/CI Engineers
-
-1. **CI/CD Setup:** [CI_IMPROVEMENTS.md](./CI_IMPROVEMENTS.md)
-2. **Security Guidelines:** [BEST_PRACTICES.md - Security Section](./BEST_PRACTICES.md#security-guidelines)
-3. **Dependency Management:** [BEST_PRACTICES.md - Dependency Management](./BEST_PRACTICES.md#dependency-management)
+1. ✅ [Architecture](./reference/ARCHITECTURE.md) - System overview
+2. ✅ [Configuration Reference](./reference/CONFIGURATION.md) - All settings
+3. ✅ [Production Deployment](./operations/PRODUCTION.md) - Deploy guide
+4. ✅ [CI/CD Pipeline](./operations/CI_CD.md) - Automation setup
 
 ### For Code Reviewers
 
-1. **Code Quality Standards:** [BEST_PRACTICES.md - Code Quality](./BEST_PRACTICES.md#code-quality-standards)
-2. **Common Issues:** [BEST_PRACTICES.md - Common Issues](./BEST_PRACTICES.md#common-issues--solutions)
-3. **Historical Fixes:** [LINTING_ISSUES.md](./LINTING_ISSUES.md)
+1. ✅ [Architecture](./reference/ARCHITECTURE.md) - Design patterns
+2. ✅ [Best Practices](./development/BEST_PRACTICES.md) - Code quality standards
+3. ✅ [Testing Guide](./development/TESTING.md) - Testing requirements
 
 ---
 
-## 🔍 Document Summaries
+## 📊 Documentation Coverage
 
-### BEST_PRACTICES.md
-**Purpose:** Comprehensive guide for daily development
+✅ **Getting Started** (3 docs)
+- Quick start, local development, accessing services
 
-**Contains:**
-- ✅ Pre-commit checklist
-- ✅ Code quality standards with examples
-- ✅ Testing best practices
-- ✅ Security guidelines
-- ✅ Debugging techniques (local & CI)
-- ✅ Common issues and solutions
-- ✅ Quick reference commands
+✅ **Development** (2 docs)
+- Best practices, testing
 
-**When to use:** Daily development, onboarding, code reviews
+✅ **Operations** (2 docs)
+- Production deployment, CI/CD
+
+✅ **Reference** (4 docs)
+- Architecture, configuration, dependencies, authentication
 
 ---
 
-### CI_IMPROVEMENTS.md
-**Purpose:** Complete CI/CD pipeline documentation
+## 🔍 Finding Information
 
-**Contains:**
-- ✅ All CI/CD improvements made
-- ✅ Security vulnerability fixes
-- ✅ Workflow architecture
-- ✅ Performance optimizations
-- ✅ Verification checklist
-- ✅ Troubleshooting guide
+### By Topic
 
-**When to use:** CI failures, workflow modifications, performance tuning
+**Setup & Installation**
+→ [Getting Started](./getting-started/)
 
----
+**Coding & Testing**
+→ [Development](./development/)
 
-### MODULE_CONFIGURATION.md
-**Purpose:** Dependency documentation and rationale
+**Deployment & Operations**
+→ [Operations](./operations/)
 
-**Contains:**
-- ✅ Complete list of 8 core dependencies
-- ✅ Why each dependency was chosen
-- ✅ Configuration examples
-- ✅ Integration patterns
-- ✅ Verification steps
-- ✅ Version history
+**Technical Details**
+→ [Reference](./reference/)
 
-**When to use:** Understanding dependencies, updating packages, audits
+### By Role
 
----
+**Developer**
+→ [Getting Started](./getting-started/), [Development](./development/), [Reference](./reference/)
 
-### DEPENDENCY_AUDIT.md
-**Purpose:** Dependency verification and audit results
+**DevOps**
+→ [Operations](./operations/), [Reference](./reference/)
 
-**Contains:**
-- ✅ Verification commands and results
-- ✅ Critical dependencies status
-- ✅ Import verification
-- ✅ Module checksums
-
-**When to use:** Security audits, dependency verification
+**Architect**
+→ [Reference](./reference/), [Operations](./operations/)
 
 ---
 
-### LINTING_ISSUES.md
-**Purpose:** Historical record of linting problems and solutions
+## 📝 Documentation Principles
 
-**Contains:**
-- ✅ All 12 critical linting issues fixed
-- ✅ Problem descriptions
-- ✅ Solutions implemented
-- ✅ Lessons learned
+This documentation follows these principles:
 
-**When to use:** Understanding past issues, preventing regressions
-
----
-
-## 🛠️ Maintenance
-
-### Keeping Documentation Up-to-Date
-
-**When to update:**
-- ✅ After major dependency updates
-- ✅ After CI/CD changes
-- ✅ After discovering new best practices
-- ✅ After fixing critical bugs
-- ✅ After security incidents
-
-**How to update:**
-```bash
-# 1. Make changes to relevant doc
-vim docs/BEST_PRACTICES.md
-
-# 2. Commit with clear message
-git add docs/
-git commit -m "docs: update best practices with new debugging technique"
-
-# 3. Keep docs in sync with code
-# - If you change CI, update CI_IMPROVEMENTS.md
-# - If you add dependencies, update MODULE_CONFIGURATION.md
-# - If you find new issues, update BEST_PRACTICES.md
-```
-
----
-
-## 📊 Documentation Statistics
-
-- **Total Documents:** 5
-- **Total Lines:** ~2,000+
-- **Last Major Update:** October 3, 2025
-- **Coverage:**
-  - ✅ Development workflow
-  - ✅ CI/CD pipeline
-  - ✅ Code quality
-  - ✅ Testing
-  - ✅ Security
-  - ✅ Debugging
-  - ✅ Dependencies
-  - ✅ Troubleshooting
+1. **MECE Organization**: Each document has a clear, non-overlapping purpose
+2. **Progressive Disclosure**: Start simple, add complexity gradually
+3. **Action-Oriented**: Focus on tasks users want to accomplish
+4. **Examples First**: Show code examples before explaining
+5. **Cross-Referenced**: Easy navigation between related topics
+6. **Maintained**: Updated with code changes
 
 ---
 
 ## 🤝 Contributing to Documentation
 
-### Guidelines
+Found an issue or want to improve the docs?
 
-1. **Be Clear and Concise**
-   - Use examples
-   - Include commands
-   - Show both good and bad patterns
+1. **Quick Fixes**: Edit the file and submit a PR
+2. **New Content**: Follow existing structure and style
+3. **Questions**: Open an issue for clarification
 
-2. **Keep It Current**
-   - Update when code changes
-   - Remove outdated information
-   - Add timestamps
+### Documentation Standards
 
-3. **Make It Searchable**
-   - Use clear headings
-   - Include keywords
-   - Add table of contents
-
-4. **Include Context**
-   - Explain "why" not just "how"
-   - Reference related docs
-   - Link to external resources
-
-### Template for New Documents
-
-```markdown
-# Document Title
-
-**Purpose:** One-line description  
-**Last Updated:** YYYY-MM-DD  
-**Status:** Current/Deprecated/Draft
+- Use clear, concise language
+- Include code examples
+- Add cross-references to related docs
+- Keep commands up to date
+- Test all instructions
 
 ---
 
-## Overview
-Brief introduction
+## 📧 Getting Help
 
-## Table of Contents
-- [Section 1](#section-1)
-- [Section 2](#section-2)
-
-## Section 1
-Content with examples
-
-## Section 2
-Content with examples
-
----
-
-**Maintained By:** Team Name  
-**Questions?** Contact info or link
-```
+- **GitHub Issues**: [Report a problem](https://github.com/petonlabs/go-boilerplate/issues)
+- **Discussions**: [Ask questions](https://github.com/petonlabs/go-boilerplate/discussions)
+- **Pull Requests**: [Contribute improvements](https://github.com/petonlabs/go-boilerplate/pulls)
 
 ---
 
 ## 🔗 External Resources
 
-### Go Documentation
+### Go Resources
 - [Effective Go](https://go.dev/doc/effective_go)
 - [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments)
-- [Go Security](https://go.dev/security/)
+- [Go Blog](https://go.dev/blog/)
 
-### Tools Documentation
-- [golangci-lint](https://golangci-lint.run/)
-- [GitHub Actions](https://docs.github.com/en/actions)
-- [Testcontainers](https://golang.testcontainers.org/)
+### Tools
+- [Echo Framework](https://echo.labstack.com/)
+- [PostgreSQL Docs](https://www.postgresql.org/docs/)
+- [Redis Documentation](https://redis.io/docs/)
+- [Docker Documentation](https://docs.docker.com/)
 
-### Project Links
-- [GitHub Repository](https://github.com/petonlabs/go-boilerplate)
-- [Issues](https://github.com/petonlabs/go-boilerplate/issues)
-- [Pull Requests](https://github.com/petonlabs/go-boilerplate/pulls)
-
----
-
-## 📧 Questions or Feedback?
-
-If you have questions about the documentation or suggestions for improvements:
-
-1. **Open an Issue:** [GitHub Issues](https://github.com/petonlabs/go-boilerplate/issues)
-2. **Submit a PR:** Update the docs directly and submit for review
-3. **Ask the Team:** Reach out to maintainers
+### Best Practices
+- [12 Factor App](https://12factor.net/)
+- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 
 ---
 
-**Last Updated:** October 3, 2025  
-**Maintained By:** go-boilerplate Team  
-**Status:** ✅ Active and maintained
+**Last Updated**: December 2024  
+**Status**: ✅ Active and maintained

@@ -1,220 +1,259 @@
 # Scripts Directory
 
-This directory contains utility scripts for development, CI/CD, and maintenance tasks.
+Utility scripts for development, CI/CD, and maintenance tasks.
 
-## Setup Scripts
+---
 
-### `setup-hooks.sh`
-Installs Git hooks for the repository (including pre-commit linting).
+## 🛠️ Available Scripts
 
-```bash
-./scripts/setup-hooks.sh
-```
+### Development
 
-**What it does:**
-- Copies `git-hooks/pre-commit` to `.git/hooks/`
-- Makes hooks executable
-- Enables automatic linting before commits
-
-## Linting Scripts
-
-### `run-lint.sh`
-Runs golangci-lint on the backend codebase.
+#### `run-lint.sh`
+Run golangci-lint on the backend codebase.
 
 ```bash
 ./scripts/run-lint.sh
 ```
 
-**Features:**
+**Features**:
 - Auto-installs golangci-lint if not found
-- Runs with project configuration (`.golangci.yml`)
-- Colored output for easy reading
-- Exit codes: 0 = success, 1 = failure
+- Uses project configuration (`.golangci.yml`)
+- Colored output for readability
 
-**Use cases:**
-- Manual code quality checks
-- CI/CD pipeline integration
-- Pre-commit verification (via hook)
-
-## Testing Scripts
-
-### `test-ci-locally.sh`
-Simulates the entire GitHub Actions CI pipeline locally.
+#### `test-ci-locally.sh`
+Simulate the GitHub Actions CI pipeline locally.
 
 ```bash
 cd apps/backend
 ../../scripts/test-ci-locally.sh
 ```
 
-**Features:**
+**What it does**:
 - Cleans environment (simulates fresh clone)
-- Sets CI environment variables
-- Downloads and verifies modules
-- Runs all CI checks:
-  - Code formatting
-  - go vet
-  - Build all packages
-  - Run tests
-  - Build binary
-  - Type checking
-  - Verify critical imports
+- Downloads and verifies Go modules
+- Runs formatters, linters, and tests
+- Builds the binary
+- Sets dummy environment variables for testing
 
-**Environment variables:**
-- Sets dummy values for missing env vars
-- Won't fail if DATABASE_URL, REDIS_URL, etc. are not set
-- Safe for local testing without full environment setup
+**Use this** before pushing to catch CI failures early.
 
-## Git Hooks
+### Git Hooks
 
-### `git-hooks/pre-commit`
-Automatically runs golangci-lint before each commit.
+#### `setup-hooks.sh`
+Install Git hooks for automatic linting.
 
-**Behavior:**
-- Only runs if `.go` files are staged in `apps/backend/`
-- Skips if golangci-lint is not installed (with warning)
-- Blocks commit if linting fails
-- Can be bypassed with `git commit --no-verify`
-
-**Installation:**
 ```bash
 ./scripts/setup-hooks.sh
 ```
 
-**Manual installation:**
+**Installs**:
+- Pre-commit hook that runs golangci-lint
+- Prevents commits with linting errors
+- Can be bypassed with `--no-verify` if needed
+
+#### `git-hooks/pre-commit`
+Pre-commit hook that runs golangci-lint automatically.
+
+**Behavior**:
+- Runs only if `.go` files are staged
+- Blocks commit if linting fails
+- Shows clear error messages
+
+### Development Environment
+
+#### `dev-start.sh`
+Start the full development stack (backend, database, Redis, frontend).
+
 ```bash
-cp scripts/git-hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+# Start everything
+./scripts/dev-start.sh
+
+# Skip frontend
+./scripts/dev-start.sh --no-frontend
+
+# Run backend in foreground for debugging
+./scripts/dev-start.sh --foreground
 ```
 
-## Backup Scripts
+**Features**:
+- Starts Docker Compose services
+- Waits for services to be healthy
+- Runs database migrations
+- Starts backend and frontend dev servers
 
-### `backup/run-backup.sh`
-Database backup script (see backup/README.md for details).
+### Backup Scripts
 
-### `backup/restore.sh`
-Database restore script (see backup/README.md for details).
+Located in `scripts/backup/`:
 
-## Usage Examples
+#### `entrypoint.sh`
+Backup service entrypoint for Docker container.
+
+#### `run-backup.sh`
+Create a database backup and upload to S3.
+
+#### `restore.sh`
+Restore database from S3 backup.
+
+See [Production Deployment](../docs/operations/PRODUCTION.md#backups) for usage.
+
+---
+
+## 📋 Usage Examples
 
 ### Before Committing
+
 ```bash
-# Option 1: Manual lint check
+# Option 1: Manual check
 ./scripts/run-lint.sh
 
-# Option 2: Let pre-commit hook handle it
-git add .
+# Option 2: Install pre-commit hook
+./scripts/setup-hooks.sh
 git commit -m "Your message"  # Hook runs automatically
 ```
 
-### Bypassing Pre-commit Hook
-```bash
-# Not recommended, but available for emergencies
-git commit --no-verify -m "Your message"
-```
+### Testing CI Locally
 
-### Local CI Testing
 ```bash
-# Test exactly what will run in GitHub Actions
 cd apps/backend
 ../../scripts/test-ci-locally.sh
-
-# If it passes locally, it should pass in CI
 ```
 
-### Installing Development Tools
+If this passes, your code should pass in GitHub Actions.
+
+### Starting Development
+
 ```bash
-# Install golangci-lint (macOS)
-brew install golangci-lint
+# Full stack
+./scripts/dev-start.sh
 
-# Install golangci-lint (Linux/macOS via script)
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.0
-
-# Add to PATH if needed
-export PATH="$PATH:$(go env GOPATH)/bin"
+# Backend only
+make docker-up
+make backend-run
 ```
 
-## Script Maintenance
+---
 
-### Adding New Scripts
-1. Create script in appropriate subdirectory
-2. Add shebang: `#!/usr/bin/env bash`
-3. Add `set -euo pipefail` for safety
-4. Make executable: `chmod +x scripts/your-script.sh`
-5. Document in this README
+## 🔧 Script Requirements
 
-### Shell Script Best Practices
-- Use `set -euo pipefail` for error handling
-- Use colors for output clarity
-- Provide clear success/failure messages
-- Exit with appropriate codes (0 = success, non-zero = failure)
-- Handle missing dependencies gracefully
+### System Dependencies
 
-## Troubleshooting
+- **bash**: Shell for running scripts
+- **Docker**: For containers
+- **Docker Compose**: For orchestration
+- **Go 1.24+**: For building backend
+- **make**: For Makefile targets
 
-### golangci-lint not found
+### Go Tools (Auto-installed)
+
+- **golangci-lint**: Code linting
+- **tern**: Database migrations
+
+---
+
+## 🚀 CI/CD Integration
+
+### GitHub Actions
+
+Scripts used in CI pipeline:
+
+1. **Linting**: `run-lint.sh`
+2. **Testing**: Built into CI workflow
+3. **Building**: Go build commands
+
+See [CI/CD Guide](../docs/operations/CI_CD.md) for CI configuration.
+
+### Local CI Testing
+
+The `test-ci-locally.sh` script exactly mirrors the GitHub Actions workflow:
+
 ```bash
-# Install via Homebrew (macOS)
-brew install golangci-lint
-
-# Or via install script
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.59.0
-```
-
-### Pre-commit hook not running
-```bash
-# Reinstall hooks
-./scripts/setup-hooks.sh
-
-# Check if hook exists and is executable
-ls -la .git/hooks/pre-commit
-```
-
-### CI simulation fails locally
-```bash
-# Clean everything and retry
 cd apps/backend
-go clean -cache -modcache -testcache
-go mod download
-go mod verify
+../../scripts/test-ci-locally.sh
 ```
 
-## Environment Variables
+**Environment variables**:
+- Sets dummy values for missing vars
+- Safe for local testing
+- Won't fail without full environment setup
 
-Scripts that need environment variables will either:
+---
+
+## 📝 Environment Variables
+
+Scripts that need environment variables either:
 1. Use dummy values for testing (like `test-ci-locally.sh`)
 2. Fail with clear error messages if required vars are missing
 3. Skip certain checks if optional vars are not set
 
 ### Required for Full Functionality
-- `DATABASE_URL`: PostgreSQL connection string
-- `REDIS_URL`: Redis connection string
-- `CLERK_SECRET_KEY`: Clerk authentication key
-- `NEW_RELIC_LICENSE_KEY`: New Relic monitoring key
-- `RESEND_API_KEY`: Resend email service key
 
-### Test/CI Scripts
-Most scripts set dummy values, so full environment setup is not required for basic testing.
+See [Configuration Reference](../docs/reference/CONFIGURATION.md) for complete list.
 
-## Integration with CI/CD
+**For local development**, most scripts work without full environment setup.
 
-### GitHub Actions
-The CI workflow (`.github/workflows/ci.yml`) uses patterns from these scripts:
-- Module download and verification
-- Linting with golangci-lint
-- Building and testing
-- Security scanning
+---
 
-### Local Development
-These scripts help ensure your code will pass CI before pushing:
-1. `run-lint.sh` - Same linter as CI
-2. `test-ci-locally.sh` - Simulates full CI pipeline
-3. Pre-commit hook - Prevents bad commits
+## 🔍 Troubleshooting
 
-## Contributing
+### Script Permission Denied
+
+```bash
+chmod +x ./scripts/script-name.sh
+```
+
+### Linter Not Found
+
+The `run-lint.sh` script auto-installs golangci-lint:
+```bash
+./scripts/run-lint.sh
+```
+
+### Docker Not Running
+
+```bash
+# Check Docker status
+docker ps
+
+# Start Docker Desktop or daemon
+```
+
+### Tests Failing Locally
+
+```bash
+# Check environment
+cat apps/backend/.env
+
+# Restart services
+make docker-down
+make docker-up
+
+# Run tests again
+cd apps/backend
+go test ./...
+```
+
+---
+
+## 🤝 Contributing Scripts
 
 When adding new scripts:
-1. Follow existing patterns and conventions
-2. Add appropriate error handling
-3. Use colors for output clarity
-4. Document in this README
-5. Test thoroughly before committing
+
+1. **Follow naming conventions**: Use kebab-case
+2. **Add shebang**: `#!/usr/bin/env bash`
+3. **Add error handling**: `set -euo pipefail`
+4. **Document in this README**: Explain purpose and usage
+5. **Make executable**: `chmod +x script.sh`
+6. **Test thoroughly**: Ensure works on different systems
+
+---
+
+## 📚 Related Documentation
+
+- [Local Development](../docs/getting-started/LOCAL_DEVELOPMENT.md)
+- [CI/CD Guide](../docs/operations/CI_CD.md)
+- [Best Practices](../docs/development/BEST_PRACTICES.md)
+- [Testing Guide](../docs/development/TESTING.md)
+
+---
+
+**Need help?** See the [main documentation](../docs/) or open an issue.
