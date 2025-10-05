@@ -98,13 +98,9 @@ jobs:
           go-version: ${{ matrix.go }}
           cache-dependency-path: apps/backend/go.sum
 
-      - name: Cache go tool binaries
-        uses: actions/cache@v4
-        with:
-          path: ~/go/bin
-          key: ${{ runner.os }}-go-tools-${{ hashFiles('apps/backend/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-tools-
+      # Note: tool binaries (govulncheck/gosec) are installed each run to avoid
+      # stale cached versions. We intentionally avoid caching ~/go/bin when
+      # installing with @latest.
 
       - name: Run govulncheck
         run: |
