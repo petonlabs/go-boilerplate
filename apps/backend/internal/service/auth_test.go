@@ -94,7 +94,12 @@ func TestRequestPasswordReset_StoresHMACAndResetSucceeds(t *testing.T) {
 	defer cleanup()
 
 	// ensure config has a token HMAC secret for deterministic behavior in tests
-	testServer.Config.Auth.TokenHMACSecret = "test-secret-1"
+	cfg := testServer.GetConfig()
+	if cfg == nil {
+		t.Fatal("test server config is nil")
+	}
+	cfg.Auth.TokenHMACSecret = "test-secret-1"
+	testServer.SetConfig(cfg)
 
 	authSvc := svc.NewAuthService(testServer)
 
@@ -133,7 +138,12 @@ func TestRotateTokenHMACSecrets(t *testing.T) {
 	defer cleanup()
 
 	// initial secret
-	testServer.Config.Auth.TokenHMACSecret = "secret-old"
+	cfg := testServer.GetConfig()
+	if cfg == nil {
+		t.Fatal("test server config is nil")
+	}
+	cfg.Auth.TokenHMACSecret = "secret-old"
+	testServer.SetConfig(cfg)
 	authSvc := svc.NewAuthService(testServer)
 
 	ctx := context.Background()

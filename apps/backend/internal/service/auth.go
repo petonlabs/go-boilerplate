@@ -43,23 +43,26 @@ var (
 
 func NewAuthService(s *server.Server) *AuthService {
 	a := &AuthService{server: s}
-	if s != nil && s.Config != nil {
-		clerk.SetKey(s.Config.Auth.SecretKey)
+	if s != nil {
+		if cfg := s.GetConfig(); cfg != nil {
+			clerk.SetKey(cfg.Auth.SecretKey)
+		}
 	}
 	// Initialize token secrets from config so reads can use the in-memory slice.
-	if s != nil && s.Config != nil {
-		initial := parseTokenSecrets(s.Config.Auth.TokenHMACSecret, s.Config.Auth.SecretKey)
-		if len(initial) == 0 {
-			// keep empty slice to avoid nil deref on reads
-			initial = []string{}
+	if s != nil {
+		if cfg := s.GetConfig(); cfg != nil {
+			initial := parseTokenSecrets(cfg.Auth.TokenHMACSecret, cfg.Auth.SecretKey)
+			if len(initial) == 0 {
+				initial = []string{}
+			}
+			a.secretsMu.Lock()
+			a.tokenSecrets = initial
+			a.secretsMu.Unlock()
+		} else {
+			a.secretsMu.Lock()
+			a.tokenSecrets = []string{}
+			a.secretsMu.Unlock()
 		}
-		a.secretsMu.Lock()
-		a.tokenSecrets = initial
-		a.secretsMu.Unlock()
-	} else {
-		a.secretsMu.Lock()
-		a.tokenSecrets = []string{}
-		a.secretsMu.Unlock()
 	}
 	return a
 }
@@ -102,8 +105,8 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, now()) ON CONFLICT DO NOTHING;`
 		last_name = $5,
 		image_url = $6,
 		raw_payload = $7
-	  WHERE (external_id IS NOT NULL AND lower(external_id) = lower($3))
-		 OR (clerk_id IS NOT NULL AND lower(clerk_id) = lower($2));`
+	  WHERE (external_id IS NOT NULL AND external_id <> '' AND lower(external_id) = lower($3))
+		 OR (clerk_id IS NOT NULL AND clerk_id <> '' AND lower(clerk_id) = lower($2));`
 
 	if _, err := a.server.DB.Pool.Exec(ctx, updateQuery, email, clerkID, externalID, firstName, lastName, imageURL, rawPayload); err != nil {
 		return err
@@ -187,11 +190,16 @@ func (a *AuthService) RequestPasswordReset(ctx context.Context, email string, tt
 	a.secretsMu.RUnlock()
 	if currentSecret == "" {
 		// fallback: parse from config (should be rare)
-		parsed := parseTokenSecrets(a.server.Config.Auth.TokenHMACSecret, a.server.Config.Auth.SecretKey)
-		if len(parsed) == 0 {
+		if cfg := a.server.GetConfig(); cfg != nil {
+			parsed := parseTokenSecrets(cfg.Auth.TokenHMACSecret, cfg.Auth.SecretKey)
+			if len(parsed) == 0 {
+				return "", fmt.Errorf("no token HMAC secret configured")
+			}
+			currentSecret = parsed[0]
+		} else {
 			return "", fmt.Errorf("no token HMAC secret configured")
 		}
-		currentSecret = parsed[0]
+
 	}
 	mac := hmac.New(sha256.New, []byte(currentSecret))
 	mac.Write([]byte(token))
@@ -230,11 +238,18 @@ func (a *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	digests := computeTokenDigests(token, localSecrets)
 	// If no secrets were loaded from the in-memory store (unlikely), fallback to parsing from config.
 	if len(digests) == 0 {
-		secrets := parseTokenSecrets(a.server.Config.Auth.TokenHMACSecret, a.server.Config.Auth.SecretKey)
-		if len(secrets) == 0 {
+		if a.server == nil {
 			return ErrInvalidPasswordResetToken
 		}
-		digests = computeTokenDigests(token, secrets)
+		if cfg := a.server.GetConfig(); cfg != nil {
+			secrets := parseTokenSecrets(cfg.Auth.TokenHMACSecret, cfg.Auth.SecretKey)
+			if len(secrets) == 0 {
+				return ErrInvalidPasswordResetToken
+			}
+			digests = computeTokenDigests(token, secrets)
+		} else {
+			return ErrInvalidPasswordResetToken
+		}
 	}
 
 	// Build a parameterized IN clause to find the user by any of the digests
@@ -385,7 +400,7 @@ func parseTokenSecrets(tokenHMACSecret, mainSecret string) []string {
 // RotateTokenHMACSecrets atomically replaces the configured token HMAC secrets.
 // Accepts an actor string to include in the audit log (e.g. 'admin_api' or user id).
 func (a *AuthService) RotateTokenHMACSecrets(newSecrets string, actor string) error {
-	if a == nil || a.server == nil || a.server.Config == nil {
+	if a == nil || a.server == nil || a.server.GetConfig() == nil {
 		return fmt.Errorf("server or config not available")
 	}
 	// sanitize input by trimming spaces
@@ -421,7 +436,7 @@ func (a *AuthService) RotateTokenHMACSecrets(newSecrets string, actor string) er
 		a.server.Logger.Info().Int("secrets_count", len(parsed)).Strs("secrets_preview_masked", masked).Msg("rotated token HMAC secrets (preview)")
 
 		// Audit entry for persistence action (actor info is best-effort; expand if available)
-		a.server.Logger.Info().Str("actor", "admin_api").Msg("persisted token HMAC secrets to server config (masked preview logged above)")
+		a.server.Logger.Info().Str("actor", actor).Msg("persisted token HMAC secrets to server config (masked preview logged above)")
 	}
 	return nil
 }

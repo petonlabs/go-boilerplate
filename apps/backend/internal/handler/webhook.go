@@ -52,8 +52,10 @@ func (h *WebhookHandler) HandleClerkWebhook(c echo.Context) error {
 
 	// Verify signature if configured
 	var signingSecret = ""
-	if h.server != nil && h.server.Config != nil && h.server.Config.Auth.WebhookSigningSecret != "" {
-		signingSecret = h.server.Config.Auth.WebhookSigningSecret
+	if h.server != nil {
+		if cfg := h.server.GetConfig(); cfg != nil && cfg.Auth.WebhookSigningSecret != "" {
+			signingSecret = cfg.Auth.WebhookSigningSecret
+		}
 	}
 	if signingSecret != "" {
 		// Clerk uses Svix style signature header; try common headers
@@ -99,9 +101,9 @@ func (h *WebhookHandler) HandleClerkWebhook(c echo.Context) error {
 		if svixID != "" && svixTs != "" {
 			// enforce replay window: parse timestamp and ensure it's within tolerance
 			tolerance := DefaultWebhookToleranceSec
-			if h.server != nil && h.server.Config != nil {
-				if h.server.Config.Auth.WebhookToleranceSec > 0 {
-					tolerance = h.server.Config.Auth.WebhookToleranceSec
+			if h.server != nil {
+				if cfg := h.server.GetConfig(); cfg != nil && cfg.Auth.WebhookToleranceSec > 0 {
+					tolerance = cfg.Auth.WebhookToleranceSec
 				}
 			}
 			// parse timestamp

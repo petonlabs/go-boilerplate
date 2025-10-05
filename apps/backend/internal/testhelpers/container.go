@@ -127,6 +127,8 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 	t.Helper()
 
 	ctx := context.Background()
+	var db *database.Database
+	var lastErr error
 	// Allow overriding container startup with an external DSN for local testing
 	if dsn := os.Getenv("TEST_DATABASE_DSN"); dsn != "" {
 		logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
@@ -173,20 +175,8 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 			Auth:        config.AuthConfig{SecretKey: "test-secret"},
 		}
 
-		var db *database.Database
-		var lastErr error
-		for i := 0; i < 5; i++ {
-			db, lastErr = database.New(cfg, &logger, nil)
-			if lastErr == nil {
-				if err := db.Pool.Ping(ctx); err == nil {
-					break
-				}
-				lastErr = err
-				db.Pool.Close()
-			}
-			time.Sleep(2 * time.Second)
-		}
-		require.NoError(t, lastErr, "failed to connect to database via TEST_DATABASE_DSN")
+		db, lastErr = connectWithRetry(cfg, &logger, 5)
+		require.NoError(t, lastErr, "failed to connect to database via TEST_DATABASE_DSN after multiple attempts")
 
 		// Apply migrations on the external DSN so schema is prepared for tests.
 		if err := database.Migrate(ctx, &logger, cfg); err != nil {
@@ -302,26 +292,7 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 
 	logger := zerolog.New(zerolog.NewConsoleWriter()).With().Timestamp().Logger()
 
-	var db *database.Database
-	var lastErr error
-	for i := 0; i < 5; i++ {
-		// Sleep before first attempt too to give PostgreSQL time to initialize
-		time.Sleep(2 * time.Second)
-
-		db, lastErr = database.New(cfg, &logger, nil)
-		if lastErr == nil {
-			// Try a ping to verify the connection
-			if err := db.Pool.Ping(ctx); err == nil {
-				break
-			} else {
-				lastErr = err
-				logger.Warn().Err(err).Msg("Failed to ping database, will retry")
-				db.Pool.Close() // Close the failed connection
-			}
-		} else {
-			logger.Warn().Err(lastErr).Msgf("Failed to connect to database (attempt %d/5)", i+1)
-		}
-	}
+	db, lastErr = connectWithRetry(cfg, &logger, 5)
 	require.NoError(t, lastErr, "failed to connect to database after multiple attempts")
 
 	// Apply migrations

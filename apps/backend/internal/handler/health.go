@@ -30,10 +30,18 @@ func (h *HealthHandler) CheckHealth(c echo.Context) error {
 		Logger()
 
 	response := map[string]interface{}{
-		"status":      "healthy",
-		"timestamp":   time.Now().UTC(),
-		"environment": h.server.Config.Primary.Env,
-		"checks":      make(map[string]interface{}),
+		"status":    "healthy",
+		"timestamp": time.Now().UTC(),
+		"environment": func() string {
+			if h.server == nil {
+				return ""
+			}
+			if cfg := h.server.GetConfig(); cfg != nil {
+				return cfg.Primary.Env
+			}
+			return ""
+		}(),
+		"checks": make(map[string]interface{}),
 	}
 
 	checks := response["checks"].(map[string]interface{})

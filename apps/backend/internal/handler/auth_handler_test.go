@@ -34,7 +34,12 @@ func TestRequestPasswordReset_ProdDoesNotReturnToken(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, userID)
 
-	testServer.Config.Primary.Env = "production"
+	cfg := testServer.GetConfig()
+	if cfg == nil {
+		t.Fatal("test server config is nil")
+	}
+	cfg.Primary.Env = "production"
+	testServer.SetConfig(cfg)
 
 	payload := map[string]string{"email": email}
 	b, _ := json.Marshal(payload)
@@ -72,7 +77,12 @@ func TestClerkWebhookSignatures(t *testing.T) {
 			_, testServer, cleanup := testhelpers.SetupTest(t)
 			defer cleanup()
 
-			testServer.Config.Auth.WebhookSigningSecret = "testsecret"
+			cfg := testServer.GetConfig()
+			if cfg == nil {
+				t.Fatal("test server config is nil")
+			}
+			cfg.Auth.WebhookSigningSecret = "testsecret"
+			testServer.SetConfig(cfg)
 
 			payload := map[string]any{"data": map[string]any{"id": "user_1", "external_id": "ext_1"}}
 			b, _ := json.Marshal(payload)
@@ -85,7 +95,11 @@ func TestClerkWebhookSignatures(t *testing.T) {
 				svixTs = strconv.FormatInt(time.Now().Add(sc.tsOffset).Unix(), 10)
 			}
 
-			mac := hmac.New(sha256.New, []byte(testServer.Config.Auth.WebhookSigningSecret))
+			signingSecret := ""
+			if cfg := testServer.GetConfig(); cfg != nil {
+				signingSecret = cfg.Auth.WebhookSigningSecret
+			}
+			mac := hmac.New(sha256.New, []byte(signingSecret))
 			mac.Write([]byte(svixID + "." + svixTs + "."))
 			mac.Write(b)
 			signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))

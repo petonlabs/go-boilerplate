@@ -72,7 +72,13 @@ func (h *AuthHandler) RequestPasswordReset(c echo.Context) error {
 		logger.Error().Err(err).Msg("invalid payload")
 		return c.NoContent(http.StatusBadRequest)
 	}
-	token, err := h.services.Auth.RequestPasswordReset(c.Request().Context(), req.Email, time.Duration(h.server.Config.Auth.PasswordResetTTL)*time.Second)
+	ttl := 0
+	if h.server != nil {
+		if cfg := h.server.GetConfig(); cfg != nil {
+			ttl = cfg.Auth.PasswordResetTTL
+		}
+	}
+	token, err := h.services.Auth.RequestPasswordReset(c.Request().Context(), req.Email, time.Duration(ttl)*time.Second)
 	if err != nil {
 		// If the email doesn't exist, treat as success to avoid user enumeration.
 		if errors.Is(err, sql.ErrNoRows) {
@@ -84,7 +90,7 @@ func (h *AuthHandler) RequestPasswordReset(c echo.Context) error {
 	}
 	// Enqueue password reset email job if job client is configured
 	if h.server != nil && h.server.Job != nil && h.server.Job.Client != nil {
-		expiresAt := time.Now().Add(time.Duration(h.server.Config.Auth.PasswordResetTTL) * time.Second).Unix()
+		expiresAt := time.Now().Add(time.Duration(ttl) * time.Second).Unix()
 		if task, err := job.NewPasswordResetTask(req.Email, token, expiresAt); err == nil {
 			_, _ = h.server.Job.Client.Enqueue(task)
 		}
@@ -92,8 +98,10 @@ func (h *AuthHandler) RequestPasswordReset(c echo.Context) error {
 	// In production the token should be delivered only via email.
 	// Return the token in the response only for development or test environments
 	env := ""
-	if h.server != nil && h.server.Config != nil && h.server.Config.Primary.Env != "" {
-		env = h.server.Config.Primary.Env
+	if h.server != nil {
+		if cfg := h.server.GetConfig(); cfg != nil && cfg.Primary.Env != "" {
+			env = cfg.Primary.Env
+		}
 	}
 	if env == "development" || env == "test" {
 		return c.JSON(http.StatusOK, map[string]string{"token": token})
@@ -134,7 +142,12 @@ func (h *AuthHandler) ScheduleDeletion(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 	// Default TTL from config (in seconds)
-	ttl := h.server.Config.Auth.DeletionDefaultTTL
+	ttl := 0
+	if h.server != nil {
+		if cfg := h.server.GetConfig(); cfg != nil {
+			ttl = cfg.Auth.DeletionDefaultTTL
+		}
+	}
 	// If user provided seconds override, use it
 	if req.Seconds > 0 {
 		// Safely convert int64 -> int taking platform bounds into account.

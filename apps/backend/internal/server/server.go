@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/newrelic/go-agent/v3/integrations/nrredis-v9"
@@ -18,16 +18,15 @@ import (
 )
 
 type Server struct {
-	Config        *config.Config
+	// configPtr holds an immutable pointer to the active config. Use
+	// GetConfig/SetConfig to access or replace it atomically.
+	configPtr     atomic.Pointer[config.Config]
 	Logger        *zerolog.Logger
 	LoggerService *loggerPkg.LoggerService
 	DB            *database.Database
 	Redis         *redis.Client
 	httpServer    *http.Server
 	Job           *job.JobService
-	// configMu protects concurrent access to Server.Config for runtime updates.
-	// Use the provided accessor methods to read or write config fields at runtime.
-	configMu sync.RWMutex
 }
 
 func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.LoggerService) (*Server, error) {
@@ -68,13 +67,14 @@ func New(cfg *config.Config, logger *zerolog.Logger, loggerService *loggerPkg.Lo
 	}
 
 	server := &Server{
-		Config:        cfg,
 		Logger:        logger,
 		LoggerService: loggerService,
 		DB:            db,
 		Redis:         redisClient,
 		Job:           jobService,
 	}
+	// Store initial config atomically
+	server.SetConfig(cfg)
 
 	// Start metrics collection
 	// Runtime metrics are automatically collected by New Relic Go agent
@@ -148,24 +148,25 @@ func (s *Server) Shutdown(ctx context.Context) error {
 // GetTokenHMACSecret returns the current TokenHMACSecret from the server config
 // under a read lock. It returns an empty string if Config or Auth is nil.
 func (s *Server) GetTokenHMACSecret() string {
-	s.configMu.RLock()
-	defer s.configMu.RUnlock()
-	if s.Config == nil {
+	cfg := s.GetConfig()
+	if cfg == nil {
 		return ""
 	}
-	return s.Config.Auth.TokenHMACSecret
+	return cfg.Auth.TokenHMACSecret
 }
 
 // SetTokenHMACSecret sets the TokenHMACSecret in the server config under a write lock.
 // This is intended as a deliberate, synchronized persistence path for runtime secret
 // rotation. Callers should ensure secrets are distributed securely in production.
 func (s *Server) SetTokenHMACSecret(newSecret string) {
-	s.configMu.Lock()
-	defer s.configMu.Unlock()
-	if s.Config == nil {
+	// Load current config, copy, mutate, and store back atomically
+	cfg := s.GetConfig()
+	if cfg == nil {
 		return
 	}
-	s.Config.Auth.TokenHMACSecret = newSecret
+	copyCfg := *cfg
+	copyCfg.Auth.TokenHMACSecret = newSecret
+	s.SetConfig(&copyCfg)
 }
 
 // getConfig returns a snapshot copy of the current server config under a
@@ -174,14 +175,13 @@ func (s *Server) SetTokenHMACSecret(newSecret string) {
 // top-level config and nested structs; slices and pointer fields are copied
 // where necessary to avoid shared mutable references for common cases.
 func (s *Server) getConfig() *config.Config {
-	s.configMu.RLock()
-	defer s.configMu.RUnlock()
-	if s.Config == nil {
+	// Atomic load of pointer
+	p := s.configPtr.Load()
+	if p == nil {
 		return nil
 	}
-
 	// Shallow copy top-level struct
-	cfg := *s.Config
+	cfg := *p
 
 	// Copy slice fields to avoid shared backing arrays
 	if cfg.Server.CORSAllowedOrigins != nil {
@@ -191,11 +191,39 @@ func (s *Server) getConfig() *config.Config {
 	}
 
 	// Deep copy Observability pointer if present
-	if s.Config.Observability != nil {
-		obs := *s.Config.Observability
+	if p.Observability != nil {
+		obs := *p.Observability
 		// If Observability contains slices/pointers, copy them here as needed
 		cfg.Observability = &obs
 	}
 
 	return &cfg
+}
+
+// GetConfig returns a snapshot of the current server config. It is safe for
+// callers to read the returned value without holding any locks. To update the
+// server's config at runtime, use SetConfig which will replace the stored
+// config under a write lock.
+func (s *Server) GetConfig() *config.Config {
+	return s.getConfig()
+}
+
+// SetConfig atomically replaces the server's config with the provided
+// snapshot. The input is copied to avoid sharing mutable backing data.
+func (s *Server) SetConfig(cfg *config.Config) {
+	if cfg == nil {
+		s.configPtr.Store(nil)
+		return
+	}
+	copyCfg := *cfg
+	if cfg.Server.CORSAllowedOrigins != nil {
+		copied := make([]string, len(cfg.Server.CORSAllowedOrigins))
+		copy(copied, cfg.Server.CORSAllowedOrigins)
+		copyCfg.Server.CORSAllowedOrigins = copied
+	}
+	if cfg.Observability != nil {
+		obs := *cfg.Observability
+		copyCfg.Observability = &obs
+	}
+	s.configPtr.Store(&copyCfg)
 }

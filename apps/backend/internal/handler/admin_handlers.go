@@ -26,12 +26,15 @@ func (h *AdminHandler) RotateSecrets(c echo.Context) error {
 	logger := middleware.GetLogger(c).With().Str("operation", "admin_rotate_secrets").Logger()
 	// Simple header-based auth for admin tooling/tests
 	adminHeader := c.Request().Header.Get("X-Admin-Token")
-	if h.server == nil || h.server.Config == nil || h.server.Config.Auth.AdminToken == "" {
+	if h.server == nil {
 		logger.Warn().Msg("admin rotate secrets unauthorized")
 		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
 	}
-	// Use constant-time comparison to avoid timing attacks
-	if subtle.ConstantTimeCompare([]byte(adminHeader), []byte(h.server.Config.Auth.AdminToken)) != 1 {
+	if cfg := h.server.GetConfig(); cfg == nil || cfg.Auth.AdminToken == "" {
+		logger.Warn().Msg("admin rotate secrets unauthorized")
+		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
+	} else if subtle.ConstantTimeCompare([]byte(adminHeader), []byte(cfg.Auth.AdminToken)) != 1 {
+		// Use constant-time comparison to avoid timing attacks
 		logger.Warn().Msg("admin rotate secrets unauthorized")
 		return echo.NewHTTPError(http.StatusUnauthorized, "unauthorized")
 	}
@@ -50,8 +53,6 @@ func (h *AdminHandler) RotateSecrets(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 	// Log an audit entry that the secrets were rotated and persisted.
-	if h.server != nil && h.server.Logger != nil {
-		h.server.Logger.Info().Str("actor", "admin_api").Msg("admin rotated token HMAC secrets and persisted to config (masked preview logged by service)")
-	}
+	logger.Info().Str("actor", "admin_api").Msg("admin rotated token HMAC secrets and persisted to config (masked preview logged by service)")
 	return c.NoContent(http.StatusOK)
 }

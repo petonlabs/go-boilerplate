@@ -18,7 +18,12 @@ func TestAdminRotateSecretsEndpoint(t *testing.T) {
 	_, testServer, cleanup := testhelpers.SetupTest(t)
 	defer cleanup()
 
-	testServer.Config.Auth.AdminToken = "admintoken"
+	cfg := testServer.GetConfig()
+	if cfg == nil {
+		t.Fatal("test server config is nil")
+	}
+	cfg.Auth.AdminToken = "admintoken"
+	testServer.SetConfig(cfg)
 
 	services, err := svc.NewServices(testServer, nil)
 	require.NoError(t, err)
@@ -34,7 +39,9 @@ func TestAdminRotateSecretsEndpoint(t *testing.T) {
 	require.NoError(t, h.Admin.RotateSecrets(c))
 	require.Equal(t, http.StatusOK, rec.Code)
 	// Verify that the server config was updated with the raw secrets string
-	require.Equal(t, "s1,s2", testServer.Config.Auth.TokenHMACSecret)
+	updated := testServer.GetConfig()
+	require.NotNil(t, updated)
+	require.Equal(t, "s1,s2", updated.Auth.TokenHMACSecret)
 	// And that the Auth service in-memory parsed slice matches expectations
 	got := services.Auth.GetTokenSecrets()
 	require.Equal(t, []string{"s1", "s2"}, got)
@@ -44,7 +51,12 @@ func TestAdminRotateSecretsEndpoint_Unauthorized(t *testing.T) {
 	_, testServer, cleanup := testhelpers.SetupTest(t)
 	defer cleanup()
 
-	testServer.Config.Auth.AdminToken = "admintoken"
+	cfg := testServer.GetConfig()
+	if cfg == nil {
+		t.Fatal("test server config is nil")
+	}
+	cfg.Auth.AdminToken = "admintoken"
+	testServer.SetConfig(cfg)
 
 	services, err := svc.NewServices(testServer, nil)
 	require.NoError(t, err)
@@ -69,7 +81,12 @@ func TestAdminRotateSecretsEndpoint_MissingToken(t *testing.T) {
 	_, testServer, cleanup := testhelpers.SetupTest(t)
 	defer cleanup()
 
-	testServer.Config.Auth.AdminToken = "admintoken"
+	cfg := testServer.GetConfig()
+	if cfg == nil {
+		t.Fatal("test server config is nil")
+	}
+	cfg.Auth.AdminToken = "admintoken"
+	testServer.SetConfig(cfg)
 
 	services, err := svc.NewServices(testServer, nil)
 	require.NoError(t, err)
