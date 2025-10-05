@@ -186,7 +186,7 @@ apps/backend/
 └── Dockerfile       # Container image
 ```
 
-See [Architecture Guide](./docs/reference/ARCHITECTURE.md) for details.
+See [Architecture Guide](./reference/ARCHITECTURE.md) for details.
 
 ---
 
@@ -217,7 +217,7 @@ func TestUserHandler_GetUser(t *testing.T) {
 }
 ```
 
-See [Testing Guide](./docs/development/TESTING.md) for comprehensive examples.
+See [Testing Guide](./TESTING.md) for comprehensive examples.
 
 ---
 
@@ -359,9 +359,9 @@ We use [Semantic Versioning](https://semver.org/):
 - [Go by Example](https://gobyexample.com/)
 
 ### Project Resources
-- [Architecture Guide](./docs/reference/ARCHITECTURE.md)
-- [Best Practices](./docs/development/BEST_PRACTICES.md)
-- [Testing Guide](./docs/development/TESTING.md)
+- [Architecture Guide](./reference/ARCHITECTURE.md)
+- [Best Practices](./development/BEST_PRACTICES.md)
+- [Testing Guide](./development/TESTING.md)
 
 ### Tools
 - [golangci-lint](https://golangci-lint.run/)
@@ -374,7 +374,7 @@ We use [Semantic Versioning](https://semver.org/):
 
 ### How do I get started?
 
-Follow the [Quick Start Guide](./docs/getting-started/QUICK_START.md) to set up your development environment.
+Follow the [Quick Start Guide](./getting-started/QUICK_START.md) to set up your development environment.
 
 ### What should I work on?
 
