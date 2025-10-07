@@ -85,7 +85,6 @@ func NewLoggerWithService(cfg *config.ObservabilityConfig, loggerService *Logger
 
 	var writer io.Writer
 
-	// Setup base writer
 	var baseWriter io.Writer
 	if cfg.IsProduction() && cfg.Logging.Format == "json" {
 		// In production, write to stdout

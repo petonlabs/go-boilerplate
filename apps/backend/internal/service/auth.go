@@ -121,7 +121,6 @@ func (a *AuthService) RegisterUser(ctx context.Context, email, password string) 
 		return "", fmt.Errorf("database not initialized")
 	}
 
-	// Hash password
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
@@ -373,7 +372,6 @@ func parseTokenSecrets(tokenHMACSecret, mainSecret string) []string {
 		}
 		return []string{mainSecret}
 	}
-	// Normalize separators
 	normalized := strings.ReplaceAll(tokenHMACSecret, "|", ",")
 	parts := strings.Split(normalized, ",")
 	out := make([]string, 0, len(parts))

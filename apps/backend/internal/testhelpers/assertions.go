@@ -84,10 +84,8 @@ func AssertEqualExceptTime(t *testing.T, expected, actual interface{}) {
 		actualVal = actualVal.Elem()
 	}
 
-	// Ensure same type
 	require.Equal(t, expectedVal.Type(), actualVal.Type(), "objects are not the same type")
 
-	// Check fields
 	for i := 0; i < expectedVal.NumField(); i++ {
 		field := expectedVal.Type().Field(i)
 

@@ -62,7 +62,6 @@ func (c *ObservabilityConfig) Validate() error {
 		return fmt.Errorf("service_name is required")
 	}
 
-	// Validate log level
 	validLevels := map[string]bool{
 		"debug": true, "info": true, "warn": true, "error": true,
 	}

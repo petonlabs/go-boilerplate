@@ -828,10 +828,10 @@ func TestLongRunning(t *testing.T) {
 
 ### Project Documentation
 
-- [CI Improvements](./CI_IMPROVEMENTS.md) - Complete CI/CD setup guide
-- [Module Configuration](./MODULE_CONFIGURATION.md) - Dependency documentation
-- [Dependency Audit](./DEPENDENCY_AUDIT.md) - Dependency verification details
-- [Linting Issues](./LINTING_ISSUES.md) - Historical linting fixes
+- [CI/CD Guide](../operations/CI_CD.md) - Complete CI/CD setup guide
+- [Dependencies](../reference/DEPENDENCIES.md) - Dependency documentation
+- [Dependency Audit](../archive/DEPENDENCY_AUDIT.md) - Dependency verification details (archived)
+- [Linting Issues](../archive/LINTING_ISSUES.md) - Historical linting fixes (archived)
 
 ---
 

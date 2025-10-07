@@ -15,23 +15,19 @@ type TxFn func(tx pgx.Tx) error
 // function returns an error. The error from the function (or from commit) is
 // returned to the caller.
 func WithTransaction(ctx context.Context, db *TestDB, fn TxFn) error {
-	// Begin transaction
 	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	// Ensure rollback happens if commit doesn't occur
 	defer func() {
 		_ = tx.Rollback(ctx) // Ignore error as transaction may already be committed
 	}()
 
-	// Run the function within the transaction
 	if err := fn(tx); err != nil {
 		return err
 	}
 
-	// Transaction was successful, commit it
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
@@ -39,20 +35,17 @@ func WithTransaction(ctx context.Context, db *TestDB, fn TxFn) error {
 	return nil
 }
 
-// WithRollbackTransaction runs a function within a transaction and always rolls it back
-// Useful for tests where you want to execute operations but never persist them
+// WithRollbackTransaction runs a function within a transaction and always rolls it back.
+// Useful for tests where you want to execute operations but never persist them.
 func WithRollbackTransaction(ctx context.Context, db *TestDB, fn TxFn) error {
-	// Begin transaction
 	tx, err := db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	// Always rollback at the end
 	defer func() {
 		_ = tx.Rollback(ctx) // Intentional rollback, ignore error
 	}()
 
-	// Run the function within the transaction
 	return fn(tx)
 }
