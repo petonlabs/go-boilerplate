@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -21,6 +22,21 @@ import (
 	svc "github.com/petonlabs/go-boilerplate/internal/service"
 	testhelpers "github.com/petonlabs/go-boilerplate/internal/testhelpers"
 )
+
+func TestMain(m *testing.M) {
+	// Setup shared container once for all tests in this package
+	if err := testhelpers.SetupSharedContainer(); err != nil {
+		panic(err)
+	}
+
+	// Run tests
+	code := m.Run()
+
+	// Cleanup
+	testhelpers.CleanupSharedContainer()
+
+	os.Exit(code)
+}
 
 func TestRequestPasswordReset_ProdDoesNotReturnToken(t *testing.T) {
 	_, testServer, cleanup := testhelpers.SetupTest(t)

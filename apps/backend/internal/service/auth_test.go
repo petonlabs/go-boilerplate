@@ -5,6 +5,7 @@ package service_test
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -13,6 +14,21 @@ import (
 	svc "github.com/petonlabs/go-boilerplate/internal/service"
 	testhelpers "github.com/petonlabs/go-boilerplate/internal/testhelpers"
 )
+
+func TestMain(m *testing.M) {
+	// Setup shared container once for all tests in this package
+	if err := testhelpers.SetupSharedContainer(); err != nil {
+		panic(err)
+	}
+
+	// Run tests
+	code := m.Run()
+
+	// Cleanup
+	testhelpers.CleanupSharedContainer()
+
+	os.Exit(code)
+}
 
 func TestRegisterLoginResetAndScheduleDeletion(t *testing.T) {
 	testDB, testServer, cleanup := testhelpers.SetupTest(t)
