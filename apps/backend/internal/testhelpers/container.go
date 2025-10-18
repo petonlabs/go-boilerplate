@@ -198,7 +198,7 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 		}
 
 		testDB := &TestDB{Pool: db.Pool, Container: nil, Config: cfg}
-		
+
 		cleanup := func() {
 			cleanupDatabaseTables(t, db.Pool)
 			if db.Pool != nil {
@@ -355,19 +355,19 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 // cleanupDatabaseTables truncates all tables to ensure test isolation
 func cleanupDatabaseTables(t *testing.T, pool *pgxpool.Pool) {
 	t.Helper()
-	
+
 	if pool == nil {
 		return
 	}
 
 	ctx := context.Background()
-	
+
 	// Try to ping first to check if pool is still active
 	if err := pool.Ping(ctx); err != nil {
 		// Pool is closed or not available, skip cleanup
 		return
 	}
-	
+
 	// Truncate user tables only (exclude schema_version and other system tables)
 	// RESTART IDENTITY resets auto-increment counters
 	// CASCADE removes dependent rows in other tables if needed
@@ -386,7 +386,7 @@ func cleanupDatabaseTables(t *testing.T, pool *pgxpool.Pool) {
 			END LOOP;
 		END $$;
 	`)
-	
+
 	if err != nil {
 		t.Logf("warning: failed to truncate tables: %v", err)
 	}
