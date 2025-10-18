@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -26,7 +27,8 @@ import (
 func TestMain(m *testing.M) {
 	// Setup shared container once for all tests in this package
 	if err := testhelpers.SetupSharedContainer(); err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "failed to setup shared container: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Run tests
