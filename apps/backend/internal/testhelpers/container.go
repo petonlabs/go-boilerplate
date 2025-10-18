@@ -246,7 +246,9 @@ func SetupTestDB(t *testing.T) (*TestDB, func()) {
 	dbPassword := "testpassword"
 
 	// Disable ryuk container to reduce verbosity and resource usage
-	os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
+	if err := os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true"); err != nil {
+		t.Logf("warning: failed to set TESTCONTAINERS_RYUK_DISABLED: %v", err)
+	}
 
 	req := testcontainers.ContainerRequest{
 		Image:        "postgres:15-alpine",
@@ -434,7 +436,9 @@ func SetupSharedContainer() error {
 
 	// Disable ryuk container to reduce verbosity and resource usage
 	// Ryuk is used for cleanup but we handle cleanup ourselves with t.Cleanup
-	os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true")
+	if err := os.Setenv("TESTCONTAINERS_RYUK_DISABLED", "true"); err != nil {
+		return fmt.Errorf("failed to set TESTCONTAINERS_RYUK_DISABLED: %w", err)
+	}
 
 	req := testcontainers.ContainerRequest{
 		Image:        "postgres:15-alpine",
