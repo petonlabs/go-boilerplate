@@ -27,10 +27,6 @@ func SetupTest(t *testing.T) (*TestDB, *server.Server, func()) {
 	// later via AttachMockEnqueuer
 
 	cleanup := func() {
-		if testDB.Pool != nil {
-			testDB.Pool.Close()
-		}
-
 		dbCleanup()
 	}
 

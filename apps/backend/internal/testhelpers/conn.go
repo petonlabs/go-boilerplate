@@ -64,13 +64,16 @@ func connectWithRetry(cfg *config.Config, logger *zerolog.Logger, retries int, h
 				return db, nil
 			} else {
 				lastErr = pingErr
-				logger.Warn().Err(pingErr).Msgf("Failed to ping database (attempt %d/%d)", i+1, retries)
+				// Log at Debug level for initial connection attempts to reduce noise
+				// Only the final failure will be logged at Warn level by the caller
+				logger.Debug().Err(pingErr).Msgf("Failed to ping database (attempt %d/%d)", i+1, retries)
 				if db != nil && db.Pool != nil {
 					db.Pool.Close()
 				}
 			}
 		} else {
-			logger.Warn().Err(lastErr).Msgf("Failed to connect to database (attempt %d/%d)", i+1, retries)
+			// Log at Debug level for initial connection attempts to reduce noise
+			logger.Debug().Err(lastErr).Msgf("Failed to connect to database (attempt %d/%d)", i+1, retries)
 		}
 
 		if i < retries-1 {
