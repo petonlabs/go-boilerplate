@@ -59,9 +59,15 @@ func (auth *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc 
 		}
 
 		c.Set("user_id", claims.Subject)
-		c.Set("user_role", claims.ActiveOrganizationRole)
-		// Remove embedded field "Claims" from selector
-		c.Set("permissions", claims.ActiveOrganizationPermissions)
+
+		// Get role from public metadata
+		if customClaims, ok := claims.Custom.(map[string]interface{}); ok {
+			if metadata, ok := customClaims["metadata"].(map[string]interface{}); ok {
+				if role, ok := metadata["role"].(string); ok {
+					c.Set("user_role", role)
+				}
+			}
+		}
 
 		auth.server.Logger.Info().
 			Str("function", "RequireAuth").
@@ -72,4 +78,16 @@ func (auth *AuthMiddleware) RequireAuth(next echo.HandlerFunc) echo.HandlerFunc 
 
 		return next(c)
 	})
+}
+
+func (auth *AuthMiddleware) RequireRole(role string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			userRole, _ := c.Get("user_role").(string)
+			if userRole != role {
+				return errs.NewForbiddenError("Forbidden", false)
+			}
+			return next(c)
+		}
+	}
 }

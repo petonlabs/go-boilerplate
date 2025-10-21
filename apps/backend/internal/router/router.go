@@ -54,7 +54,8 @@ func NewRouter(s *server.Server, h *handler.Handlers, services *service.Services
 	registerSystemRoutes(router, h)
 
 	// register versioned routes
-	router.Group("/api/v1")
+	v1 := router.Group("/api/v1")
+	registerAdminRoutes(v1, h, middlewares)
 
 	return router
 }
