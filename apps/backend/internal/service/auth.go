@@ -69,7 +69,7 @@ func NewAuthService(s *server.Server) *AuthService {
 
 // SyncUser upserts a user record from Clerk webhook data
 // email parameter should be provided from the webhook payload when available.
-func (a *AuthService) SyncUser(ctx context.Context, clerkID, externalID, email, firstName, lastName, imageURL string, rawPayload []byte) error {
+func (a *AuthService) SyncUser(ctx context.Context, clerkID, externalID, email, firstName, lastName, imageURL, role string, rawPayload []byte) error {
 	if a.server == nil || a.server.DB == nil || a.server.DB.Pool == nil {
 		return fmt.Errorf("database not initialized")
 	}
@@ -88,9 +88,9 @@ func (a *AuthService) SyncUser(ctx context.Context, clerkID, externalID, email, 
 
 	// Try insert; ON CONFLICT DO NOTHING prevents unique-violation errors
 	// from bubbling up if one of the single-column unique indexes exists.
-	insertQuery := `INSERT INTO users (email, clerk_id, external_id, first_name, last_name, image_url, raw_payload, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, now()) ON CONFLICT DO NOTHING;`
-	if _, err := a.server.DB.Pool.Exec(ctx, insertQuery, email, clerkID, externalID, firstName, lastName, imageURL, rawPayload); err != nil {
+	insertQuery := `INSERT INTO users (email, clerk_id, external_id, first_name, last_name, image_url, role, raw_payload, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now()) ON CONFLICT DO NOTHING;`
+	if _, err := a.server.DB.Pool.Exec(ctx, insertQuery, email, clerkID, externalID, firstName, lastName, imageURL, role, rawPayload); err != nil {
 		return err
 	}
 
@@ -104,11 +104,12 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, now()) ON CONFLICT DO NOTHING;`
 		first_name = $4,
 		last_name = $5,
 		image_url = $6,
-		raw_payload = $7
+		role = $7,
+		raw_payload = $8
 	  WHERE (external_id IS NOT NULL AND external_id <> '' AND lower(external_id) = lower($3))
 		 OR (clerk_id IS NOT NULL AND clerk_id <> '' AND lower(clerk_id) = lower($2));`
 
-	if _, err := a.server.DB.Pool.Exec(ctx, updateQuery, email, clerkID, externalID, firstName, lastName, imageURL, rawPayload); err != nil {
+	if _, err := a.server.DB.Pool.Exec(ctx, updateQuery, email, clerkID, externalID, firstName, lastName, imageURL, role, rawPayload); err != nil {
 		return err
 	}
 

@@ -166,6 +166,14 @@ func (h *WebhookHandler) HandleClerkWebhook(c echo.Context) error {
 	lastName, _ := data["last_name"].(string)
 	imageURL, _ := data["image_url"].(string)
 
+	// Extract role from public metadata
+	var role string
+	if publicMetadata, ok := data["public_metadata"].(map[string]interface{}); ok {
+		if r, ok := publicMetadata["role"].(string); ok {
+			role = r
+		}
+	}
+
 	// Marshal the raw data into jsonb for storage
 	rawJSON, _ := json.Marshal(data)
 
@@ -175,7 +183,7 @@ func (h *WebhookHandler) HandleClerkWebhook(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	if err := h.services.Auth.SyncUser(c.Request().Context(), clerkID, externalID, email, firstName, lastName, imageURL, rawJSON); err != nil {
+	if err := h.services.Auth.SyncUser(c.Request().Context(), clerkID, externalID, email, firstName, lastName, imageURL, role, rawJSON); err != nil {
 		logger.Error().Err(err).Msg("failed to sync user from webhook")
 		return c.NoContent(http.StatusInternalServerError)
 	}
