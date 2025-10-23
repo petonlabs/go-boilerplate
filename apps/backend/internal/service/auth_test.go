@@ -209,7 +209,7 @@ func TestSyncUserUpserts(t *testing.T) {
 	raw := []byte(`{"id":"user_123","external_id":"ext_123","first_name":"Alice"}`)
 
 	email := "alice@example.com"
-	err := authSvc.SyncUser(ctx, clerkID, externalID, email, firstName, lastName, imageURL, raw)
+	err := authSvc.SyncUser(ctx, clerkID, externalID, email, firstName, lastName, imageURL, "", raw)
 	require.NoError(t, err)
 
 	// Query DB for the user
@@ -244,7 +244,7 @@ func TestSyncUserUpserts_ClerkIDOnly(t *testing.T) {
 	imageURL := "https://example.com/bob.jpg"
 	raw := []byte(`{"id":"user_only_123","first_name":"Bob"}`)
 
-	err := authSvc.SyncUser(ctx, clerkID, externalID, email, firstName, lastName, imageURL, raw)
+	err := authSvc.SyncUser(ctx, clerkID, externalID, email, firstName, lastName, imageURL, "", raw)
 	require.NoError(t, err)
 
 	var gotClerkID string
