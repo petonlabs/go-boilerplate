@@ -1,6 +1,6 @@
 # Makefile for common dev tasks (make from repo root)
 
-.PHONY: help docker-up docker-down build backend-run migrations-up migrations-down backup-run test lint
+.PHONY: help docker-up docker-down build backend-run migrations-up migrations-down backup-run test lint test-coverage ci-check
 .PHONY: check-env psql redis-cli logs open-docs list-backups psql-runner
 
 help:
@@ -13,7 +13,9 @@ help:
 	@echo "  migrations-down  - rollback last migration (uses DB_DSN env)"
 	@echo "  backup-run       - run DB backup job"
 	@echo "  test             - run backend tests"
+	@echo "  test-coverage    - run backend tests and generate coverage report"
 	@echo "  lint             - run golangci-lint (backend)"
+	@echo "  ci-check         - run lint and test coverage"
 
 # Docker shortcuts
 docker-up:
@@ -74,6 +76,15 @@ test:
 	@echo "Running go tests"
 	cd apps/backend && go test ./...
 
+test-coverage:
+	@echo "Running go tests with coverage"
+	cd apps/backend && go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
+
 # Lint (requires golangci-lint installed locally)
 lint:
 	cd apps/backend && golangci-lint run ./...
+
+ci-check:
+	@echo "Running CI checks"
+	make lint
+	make test-coverage
